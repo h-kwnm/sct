@@ -17,7 +17,7 @@ import (
 
 var httpClient = &http.Client{Timeout: 30 * time.Second}
 
-const logListUrl = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
+var logListUrl = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 
 // Some log operators could apply request rate limits. for example, Geomys's log has such a limit.
 // Cuustomize User-Agent to include an email address to mitigate such limits when needed.
@@ -58,8 +58,11 @@ func fetchLogList() (*LogList, error) {
 func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 	var signedNotes []SignedNote
 	for _, line := range lines {
+		if !strings.HasPrefix(line, "— ") {
+			continue
+		}
 		trimmed := strings.TrimPrefix(line, "— ")
-		tuple := strings.Split(trimmed, " ")
+		tuple := strings.SplitN(trimmed, " ", 2)
 		if len(tuple) == 2 {
 			var sn SignedNote
 			if tuple[0] == origin {
