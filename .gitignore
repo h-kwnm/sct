@@ -1,0 +1,12 @@
+# binary
+sct
+
+# debug data files
+*.dat
+*.json
+
+# Go test cache
+*.test
+
+# Claude
+.claude
