@@ -29,9 +29,6 @@ func runCheckpoint(args []string) {
 		os.Exit(1)
 	}
 
-	// fmt.Printf("Origin:   %s\n", cp.Origin)
-	// fmt.Printf("TreeSize: %d\n", cp.TreeSize)
-	// fmt.Printf("RootHash: %s\n", cp.RootHash)
 	b, err := json.MarshalIndent(cp, "", "  ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error marshaling JSON-formatted checkpoint : %v\n", err)

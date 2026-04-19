@@ -28,8 +28,6 @@ func main() {
 		return
 	}
 
-	// TODO loadConfig - configure user-agent
-
 	switch args[0] {
 	case "logs":
 		runLogs(args[1:])
