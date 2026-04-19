@@ -23,7 +23,7 @@ func runCheckpoint(args []string) {
 		os.Exit(1)
 	}
 
-	cp, err := fetchCheckpoint(log.MonitoringUrl)
+	cp, err := fetchCheckpoint(log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error fetching checkpoint: %v\n", err)
 		os.Exit(1)

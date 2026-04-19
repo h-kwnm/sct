@@ -119,7 +119,7 @@ func TestFetchCheckpoint(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cp, err := fetchCheckpoint(server.URL + "/")
+	cp, err := fetchCheckpoint(&CachedLog{MonitoringUrl: server.URL + "/"})
 	if err != nil {
 		t.Fatalf("fetchCheckpoint() error = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestFetchCheckpointNonOK(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := fetchCheckpoint(server.URL + "/")
+	_, err := fetchCheckpoint(&CachedLog{MonitoringUrl: server.URL + "/"})
 	if err == nil {
 		t.Fatal("expected error for non-200 response, got nil")
 	}

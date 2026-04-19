@@ -99,9 +99,9 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 	return signedNotes, nil
 }
 
-func fetchCheckpoint(monitoringUrl string) (Checkpoint, error) {
+func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 	// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#checkpoints
-	checkpointEndpoint := monitoringUrl + "checkpoint"
+	checkpointEndpoint := log.MonitoringUrl + "checkpoint"
 
 	slog.Debug("fetchCheckpoint", "url", checkpointEndpoint)
 
@@ -162,12 +162,12 @@ func fetchCheckpoint(monitoringUrl string) (Checkpoint, error) {
 	}, nil
 }
 
-func buildIndex(leafIndex int64, tileLogUrl string) (string, error) {
+func buildIndex(leafIndex int64, log *CachedLog) (string, error) {
 	if leafIndex <= 0 {
 		return "", fmt.Errorf("invalid leaf index: %d", leafIndex)
 	}
 
-	cp, err := fetchCheckpoint(tileLogUrl)
+	cp, err := fetchCheckpoint(log)
 	if err != nil {
 		return "", err
 	}
@@ -205,13 +205,13 @@ func buildIndex(leafIndex int64, tileLogUrl string) (string, error) {
 	return indexPath, nil
 }
 
-func fetchDataTile(leafIndex int64, tileLogUrl string) ([]byte, string, error) {
-	tileIndexPath, err := buildIndex(leafIndex, tileLogUrl)
+func fetchDataTile(leafIndex int64, log *CachedLog) ([]byte, string, error) {
+	tileIndexPath, err := buildIndex(leafIndex, log)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get index path: %w", err)
 	}
 
-	dataTileEndpoint := tileLogUrl + "tile/data/" + tileIndexPath
+	dataTileEndpoint := fmt.Sprintf("%stile/data/%s", log.MonitoringUrl, tileIndexPath)
 	slog.Debug("fetchDataTile", "url", dataTileEndpoint)
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", dataTileEndpoint, nil)

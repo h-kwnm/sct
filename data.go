@@ -28,7 +28,7 @@ func runData(args []string) {
 		os.Exit(1)
 	}
 
-	tile, tileIndexPath, err := fetchDataTile(*index, log.MonitoringUrl)
+	tile, tileIndexPath, err := fetchDataTile(*index, log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to fetch data tile: %v\n", err)
 		os.Exit(1)
