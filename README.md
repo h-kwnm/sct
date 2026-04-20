@@ -36,7 +36,8 @@ sct checkpoint --log <id>
 
 ### `data` — Fetch a data tile
 
-Fetches the data tile containing the given leaf index, parses its entries, and saves them as a JSON file.
+Fetches the data tile containing the given leaf index, parses its entries, and prints it as JSON.
+Additionaly a data tile entries including the leaf is saved as a JSON file.
 
 ```sh
 sct data --log <id> --index <leaf-index>
@@ -44,6 +45,15 @@ sct data --log <id> --index <leaf-index> --out <dir>   # save to specific direct
 ```
 
 Output is written to `~/.cache/sct/` by default.
+
+### `get-sct` — Extract SCT extension contents
+
+Extract SCT extension contents from a PEM-formatted certificate file and prints it as JSON.
+
+```sh
+sct get-sct --pem <pem-file>
+```
+
 
 ### `version` — Print version
 
