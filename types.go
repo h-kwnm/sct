@@ -81,7 +81,7 @@ type LogList struct {
 
 type Checkpoint struct {
 	Origin      string       `json:"origin"`
-	TreeSize    int64        `json:"tree_size"`
+	TreeSize    uint64       `json:"tree_size"`
 	RootHash    string       `json:"root_hash"`
 	SignedNotes []SignedNote `json:"signed_notes"`
 }

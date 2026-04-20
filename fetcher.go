@@ -137,12 +137,9 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 		return Checkpoint{}, fmt.Errorf("origin is too long: %d", len(parts[0]))
 	}
 
-	treeSize, err := strconv.ParseInt(parts[1], 10, 64)
+	treeSize, err := strconv.ParseUint(parts[1], 10, 64)
 	if err != nil {
 		return Checkpoint{}, fmt.Errorf("invalid tree size: %w", err)
-	}
-	if treeSize < 0 {
-		return Checkpoint{}, fmt.Errorf("invalid tree size: %d", treeSize)
 	}
 
 	if len(parts[2]) > 512 {
@@ -162,11 +159,7 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 	}, nil
 }
 
-func buildIndex(leafIndex int64, log *CachedLog) (string, error) {
-	if leafIndex <= 0 {
-		return "", fmt.Errorf("invalid leaf index: %d", leafIndex)
-	}
-
+func buildIndex(leafIndex uint64, log *CachedLog) (string, error) {
 	cp, err := fetchCheckpoint(log)
 	if err != nil {
 		return "", err
@@ -174,7 +167,7 @@ func buildIndex(leafIndex int64, log *CachedLog) (string, error) {
 
 	tileIndex := (leafIndex - 1) / 256
 	maxTileIndex := (cp.TreeSize - 1) / 256
-	var partialIndex int64 = 0
+	var partialIndex uint64 = 0
 	if tileIndex == maxTileIndex {
 		partialIndex = leafIndex % 256
 	}
@@ -198,14 +191,14 @@ func buildIndex(leafIndex int64, log *CachedLog) (string, error) {
 	}
 
 	if partialIndex != 0 {
-		indexPath += ".p/" + strconv.FormatInt(partialIndex, 10)
+		indexPath += ".p/" + strconv.FormatUint(partialIndex, 10)
 	}
 	slog.Debug("buildIndex", "tile_index_path", indexPath)
 
 	return indexPath, nil
 }
 
-func fetchDataTile(leafIndex int64, log *CachedLog) ([]byte, string, error) {
+func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
 	tileIndexPath, err := buildIndex(leafIndex, log)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get index path: %w", err)

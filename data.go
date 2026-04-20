@@ -13,7 +13,7 @@ import (
 func runData(args []string) {
 	fs := flag.NewFlagSet("data", flag.ExitOnError)
 	logId := fs.Int("log", 0, "log id (see 'sct logs')")
-	index := fs.Int64("index", 0, "leaf index")
+	index := fs.Uint64("index", 0, "leaf index")
 	outpath := fs.String("out", "", "data tile entries output location")
 	fs.Parse(args)
 
@@ -36,7 +36,13 @@ func runData(args []string) {
 
 	fmt.Printf("fetched %d bytes from %s\n", len(tile), log.MonitoringUrl)
 
-	p, err := saveDataTileEntries(tile, log.MonitoringUrl, tileIndexPath, *outpath)
+	entries, err := parseDataTile(tile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to parse data tile: %v", err)
+		os.Exit(1)
+	}
+
+	p, err := saveDataTileEntries(entries, log.MonitoringUrl, tileIndexPath, *outpath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to save data tile entries to file: %v\n", err)
 		os.Exit(1)
@@ -63,12 +69,7 @@ func buildDataOutputPath(outpath string, url string) (string, error) {
 	return dataTileFilepath, nil
 }
 
-func saveDataTileEntries(data []byte, url string, tilePath string, outpath string) (string, error) {
-	entries, err := parseDataTile(data)
-	if err != nil {
-		return "", err
-	}
-
+func saveDataTileEntries(entries []DataEntry, url string, tilePath string, outpath string) (string, error) {
 	result := DataTile{
 		MonitoringUrl: url,
 		TileIndexPath: tilePath,
