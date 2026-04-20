@@ -165,11 +165,11 @@ func buildIndex(leafIndex uint64, log *CachedLog) (string, error) {
 		return "", err
 	}
 
-	tileIndex := (leafIndex - 1) / 256
+	tileIndex := leafIndex / 256
 	maxTileIndex := (cp.TreeSize - 1) / 256
 	var partialIndex uint64 = 0
 	if tileIndex == maxTileIndex {
-		partialIndex = leafIndex % 256
+		partialIndex = cp.TreeSize % 256
 	}
 	if tileIndex > maxTileIndex {
 		return "", fmt.Errorf("invalid index size %d (greater than current tree size %d)", leafIndex, cp.TreeSize)
