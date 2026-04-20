@@ -34,12 +34,26 @@ func runData(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("fetched %d bytes from %s\n", len(tile), log.MonitoringUrl)
-
 	entries, err := parseDataTile(tile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse data tile: %v", err)
 		os.Exit(1)
+	}
+
+	found := false
+	for _, e := range entries {
+		if e.LeafIndex == *index {
+			b, err := json.MarshalIndent(e, "", "  ")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to marshal entry: %v\n", *index)
+			}
+			fmt.Println(string(b))
+			found = true
+			break
+		}
+	}
+	if !found {
+		fmt.Fprintf(os.Stderr, "leaf index %d not found in tile\n", *index)
 	}
 
 	p, err := saveDataTileEntries(entries, log.MonitoringUrl, tileIndexPath, *outpath)

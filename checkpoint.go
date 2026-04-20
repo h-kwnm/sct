@@ -34,5 +34,5 @@ func runCheckpoint(args []string) {
 		fmt.Fprintf(os.Stderr, "error marshaling JSON-formatted checkpoint : %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Checkpoint: %s\n", string(b))
+	fmt.Println(string(b))
 }
