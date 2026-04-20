@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"crypto/x509"
+	"encoding/asn1"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -282,4 +284,159 @@ func parseDataTile(data []byte) ([]DataEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// x.509 cert sct extensions
+
+var oidSCTList = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
+
+func parseCertSCT(derData []byte) ([]SCT, error) {
+
+	cert, err := x509.ParseCertificate(derData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse input certificate: %w", err)
+	}
+
+	var sctListBytes []byte
+	var scts []SCT
+	for _, ext := range cert.Extensions {
+		// https://www.rfc-editor.org/rfc/rfc6962#section-3.3
+		//
+		//  opaque SerializedSCT<1..2^16-1>;
+		//  struct {
+		//      SerializedSCT sct_list <1..2^16-1>;
+		//  } SignedCertificateTimestampList;
+		//
+		// https://www.rfc-editor.org/rfc/rfc6962#section-3.2
+		//
+		//	struct {
+		//	    Version sct_version; // 1 byte
+		//	    LogID id; // 32 bytes
+		//	    uint64 timestamp; // 8 bytes
+		//	    CtExtensions extensions;
+		//	    digitally-signed struct {
+		//	        Version sct_version;
+		//	        SignatureType signature_type = certificate_timestamp;
+		//	        uint64 timestamp;
+		//	        LogEntryType entry_type;
+		//	        select(entry_type) {
+		//	            case x509_entry: ASN.1Cert;
+		//	            case precert_entry: PreCert;
+		//	        } signed_entry;
+		//	       CtExtensions extensions;
+		//	    };
+		//	} SignedCertificateTimestamp;
+		if ext.Id.Equal(oidSCTList) {
+			_, err := asn1.Unmarshal(ext.Value, &sctListBytes)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse SCT extension value: %w", err)
+			}
+
+			r := bytes.NewReader(sctListBytes)
+
+			var totalSctLen uint16
+			if err := binary.Read(r, binary.BigEndian, &totalSctLen); err != nil {
+				return nil, fmt.Errorf("failed to read SCT list length: %v", err)
+			}
+			sctListData := make([]byte, totalSctLen)
+			_, err = io.ReadFull(r, sctListData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read sct extension list: %v", err)
+			}
+
+			sctReader := bytes.NewReader(sctListData)
+
+			for sctReader.Len() > 0 {
+				var sct SCT
+
+				var sctLen uint16
+				if err := binary.Read(sctReader, binary.BigEndian, &sctLen); err != nil {
+					return nil, fmt.Errorf("failed to read SCT extension length: %w", err)
+				}
+
+				var sctData = make([]byte, sctLen)
+				_, err := io.ReadFull(sctReader, sctData[:])
+				if err != nil {
+					return nil, fmt.Errorf("failed to read SCT extension data: %w", err)
+				}
+				sr := bytes.NewReader(sctData)
+
+				var sctVersion uint8
+				if err := binary.Read(sr, binary.BigEndian, &sctVersion); err != nil {
+					return nil, fmt.Errorf("failed to read SCT version: %w", err)
+				}
+				sct.Version = sctVersion
+
+				var logId [32]byte
+				if err := binary.Read(sr, binary.BigEndian, logId[:]); err != nil {
+					return nil, fmt.Errorf("failed to read log id: %w", err)
+				}
+				// allign the same format with "log_id" field in log_list.json
+				sct.LogId = base64.StdEncoding.EncodeToString(logId[:])
+
+				var ts uint64
+				if err := binary.Read(sr, binary.BigEndian, &ts); err != nil {
+					return nil, fmt.Errorf("failed to read timestamp: %w", err)
+				}
+				sct.Timestamp = time.UnixMilli(int64(ts)).UTC()
+
+				// TODO: merge this part of CT extensions parse with parseCtExtensions
+				var ctExt CtExtension
+				var extLen uint16 // 2 bytes length header
+				if err := binary.Read(sr, binary.BigEndian, &extLen); err != nil {
+					return nil, fmt.Errorf("reading ct extension length: %w", err)
+				}
+				if extLen > maxCtExtSize {
+					return nil, fmt.Errorf("too long ct extension length: %d", extLen)
+				}
+				ctExt.ExtensionLength = extLen
+
+				if extLen > 0 {
+					extData := make([]byte, extLen)
+					if _, err := io.ReadFull(sr, extData); err != nil {
+						return nil, fmt.Errorf("reading ct extensions: %w", err)
+					}
+					extReader := bytes.NewReader(extData)
+
+					var extType uint8
+					if err := binary.Read(extReader, binary.BigEndian, &extType); err != nil {
+						return nil, fmt.Errorf("reading ct extension type: %w", err)
+					}
+					ctExt.ExtensionType = extType
+
+					switch extType {
+					case extensionTypeLeafIndex:
+						var leafIndexLen uint16
+						if err := binary.Read(extReader, binary.BigEndian, &leafIndexLen); err != nil {
+							return nil, fmt.Errorf("reading leaf index ct extension length: %w", err)
+						}
+						if leafIndexLen != 5 {
+							return nil, fmt.Errorf("invalid leaf index length: %d", leafIndexLen)
+						}
+
+						leafIndex, err := readUint40(extReader)
+						if err != nil {
+							return nil, fmt.Errorf("reading leaf index in ct extension type %d: %w", extensionTypeLeafIndex, err)
+						}
+						ctExt.ExtensionValue = leafIndex
+
+						slog.Debug("parseCtExtensions", "extType", extType, "leafIndex", leafIndex)
+					default:
+						// no-op. just ignore unknown extension for now.
+						// return nil, fmt.Errorf("unknown ct extension type: %d", extType)
+					}
+
+					if extReader.Len() > 0 {
+						return nil, fmt.Errorf("ct extension has %d unexpected trailing bytes", extReader.Len())
+					}
+
+					sct.CtExtensions = append(sct.CtExtensions, ctExt)
+				}
+
+				scts = append(scts, sct)
+			}
+		}
+	}
+
+	return scts, nil
 }

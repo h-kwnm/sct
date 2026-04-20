@@ -34,8 +34,12 @@ func main() {
 		return
 	case "checkpoint":
 		runCheckpoint(args[1:])
+		return
 	case "data":
 		runData(args[1:])
+		return
+	case "get-sct":
+		runGetSct(args[1:])
 		return
 	case "version":
 		fmt.Println(version)

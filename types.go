@@ -201,3 +201,30 @@ type DataTile struct {
 	FetchedAt     time.Time   `json:"fetched_time"`
 	Entries       []DataEntry `json:"entries"`
 }
+
+// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#sct-extension
+//
+//	enum {
+//		leaf_index(0), (255)
+//	} ExtensionType;
+//
+//	struct {
+//		ExtensionType extension_type;
+//		opaque extension_data<0..2^16-1>;
+//	} Extension;
+//
+// Extension CtExtensions<0..2^16-1>;
+// uint8 uint40[5];
+// uint40 LeafIndex;
+type CtExtension struct {
+	ExtensionType   uint8  `json:"extension_type"`
+	ExtensionLength uint16 `json:"extension_length"`
+	ExtensionValue  uint64 `json:"extension_value"`
+}
+
+type SCT struct {
+	Version      uint8         `json:"version"`
+	LogId        string        `json:"log_id"`
+	Timestamp    time.Time     `json:"timestamp"`
+	CtExtensions []CtExtension `json:"ct_extensions,omitempty"`
+}

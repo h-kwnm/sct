@@ -45,7 +45,7 @@ func runData(args []string) {
 		if e.LeafIndex == *index {
 			b, err := json.MarshalIndent(e, "", "  ")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "failed to marshal entry: %v\n", *index)
+				fmt.Fprintf(os.Stderr, "failed to marshal entry: %v\n", err)
 			}
 			fmt.Println(string(b))
 			found = true
@@ -69,7 +69,7 @@ func buildDataOutputPath(outpath string, url string) (string, error) {
 	hash := sha256.Sum256([]byte(url))
 	unixEpoch := time.Now().UTC().Unix()
 	filename := fmt.Sprintf("data_%x_%d.json", hash[:8], unixEpoch)
-	var dataTileFilepath string = ""
+	dataTileFilepath := ""
 	if outpath == "" {
 		userCachePath, err := os.UserCacheDir()
 		if err != nil {
