@@ -80,58 +80,73 @@ func parseSignedEntry(r *bytes.Reader, de *DataEntry, entryType uint16) ([]byte,
 	return certDer, nil
 }
 
-func parseCtExtensions(r *bytes.Reader, de *DataEntry) error {
-	// parse ct extensions. only leaf_index(0) is defined at this time.
+func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
+	// parse ct extension. only leaf_index(0) is defined at this time.
 	// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#sct-extension
+	var ctExt CtExtension
+
 	var extLen uint16 // 2 bytes length header
 	if err := binary.Read(r, binary.BigEndian, &extLen); err != nil {
-		return fmt.Errorf("reading ct extension length: %w", err)
+		return CtExtension{}, fmt.Errorf("reading ct extension length: %w", err)
 	}
 	if extLen > maxCtExtSize {
-		return fmt.Errorf("too long ct extension length: %d", extLen)
+		return CtExtension{}, fmt.Errorf("too long ct extension length: %d", extLen)
 	}
+	ctExt.ExtensionLength = extLen
 
-	slog.Debug("parseCtExtensions", "headerLen", 2, "extLen", extLen)
+	slog.Debug("parseCtExtension", "headerLen", 2, "extLen", extLen)
 
 	if extLen > 0 {
 		extData := make([]byte, extLen)
 		if _, err := io.ReadFull(r, extData); err != nil {
-			return fmt.Errorf("reading ct extensions: %w", err)
+			return CtExtension{}, fmt.Errorf("reading ct extensions: %w", err)
 		}
 		extReader := bytes.NewReader(extData)
 
 		var extType uint8
 		if err := binary.Read(extReader, binary.BigEndian, &extType); err != nil {
-			return fmt.Errorf("reading ct extension type: %w", err)
+			return CtExtension{}, fmt.Errorf("reading ct extension type: %w", err)
 		}
+		ctExt.ExtensionType = extType
 
 		switch extType {
 		case extensionTypeLeafIndex:
 			var leafIndexLen uint16
 			if err := binary.Read(extReader, binary.BigEndian, &leafIndexLen); err != nil {
-				return fmt.Errorf("reading leaf index ct extension length: %w", err)
+				return CtExtension{}, fmt.Errorf("reading leaf index ct extension length: %w", err)
 			}
 			if leafIndexLen != 5 {
-				return fmt.Errorf("invalid leaf index length: %d", leafIndexLen)
+				return CtExtension{}, fmt.Errorf("invalid leaf index length: %d", leafIndexLen)
 			}
 
 			leafIndex, err := readUint40(extReader)
 			if err != nil {
-				return fmt.Errorf("reading leaf index in ct extension type %d: %w", extensionTypeLeafIndex, err)
+				return CtExtension{}, fmt.Errorf("reading leaf index in ct extension type %d: %w", extensionTypeLeafIndex, err)
 			}
-			de.LeafIndex = leafIndex
+			ctExt.ExtensionValue = leafIndex
 
-			slog.Debug("parseCtExtensions", "extType", extType, "leafIndex", leafIndex)
+			slog.Debug("parseCtExtension", "extType", extType, "leafIndex", leafIndex)
 		default:
-			return fmt.Errorf("unknown ct extension type: %d", extType)
-		}
+			// just ignore unknown extension for now, as specified in static-ct-api specification.
+			// currently "leaf_index" is the only extenstion type.
+			// return CtExtension{}, fmt.Errorf("unknown ct extension type: %d", extType)
+			var unknownTypeLen uint16
+			if err := binary.Read(extReader, binary.BigEndian, &unknownTypeLen); err != nil {
+				return CtExtension{}, fmt.Errorf("failed to read unknown type ct extension length: %w", err)
+			}
 
-		if extReader.Len() > 0 {
-			return fmt.Errorf("ct extension has %d unexpected trailing bytes", extReader.Len())
+			unknownTypeValue := make([]byte, unknownTypeLen)
+			if _, err := io.ReadFull(extReader, unknownTypeValue); err != nil {
+				return CtExtension{}, fmt.Errorf("failed to read unknown type ct extension value: %w", err)
+			}
+
+			slog.Debug("parseCtExtension", "extType", extType, "unknownCtTypeValue", fmt.Sprintf("%x", unknownTypeValue))
+
+			return ctExt, nil
 		}
 	}
 
-	return nil
+	return ctExt, nil
 }
 
 func parseTimestampedEntry(r *bytes.Reader, de *DataEntry) ([]byte, uint16, error) {
@@ -160,10 +175,16 @@ func parseTimestampedEntry(r *bytes.Reader, de *DataEntry) ([]byte, uint16, erro
 	}
 
 	// extensions - TimestampedEntry.extensions
-	if err := parseCtExtensions(r, de); err != nil {
+	ext, err := parseCtExtension(r)
+	if err != nil {
 		return nil, 0, fmt.Errorf("parsing ct extensions: %w", err)
 	}
-
+	if ext.ExtensionLength == 0 {
+		// SCT CtExtensions MUST include "leaf_index" type ct extension.
+		return nil, 0, fmt.Errorf("invalid empty ct extension(it must include leaf_index extension)")
+	} else {
+		de.LeafIndex = ext.ExtensionValue
+	}
 	return certDer, entryType, nil
 }
 
@@ -380,56 +401,11 @@ func parseCertSCT(derData []byte) ([]SCT, error) {
 				}
 				sct.Timestamp = time.UnixMilli(int64(ts)).UTC()
 
-				// TODO: merge this part of CT extensions parse with parseCtExtensions
-				var ctExt CtExtension
-				var extLen uint16 // 2 bytes length header
-				if err := binary.Read(sr, binary.BigEndian, &extLen); err != nil {
-					return nil, fmt.Errorf("reading ct extension length: %w", err)
+				ctExt, err := parseCtExtension(sr)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse ct extension: %w", err)
 				}
-				if extLen > maxCtExtSize {
-					return nil, fmt.Errorf("too long ct extension length: %d", extLen)
-				}
-				ctExt.ExtensionLength = extLen
-
-				if extLen > 0 {
-					extData := make([]byte, extLen)
-					if _, err := io.ReadFull(sr, extData); err != nil {
-						return nil, fmt.Errorf("reading ct extensions: %w", err)
-					}
-					extReader := bytes.NewReader(extData)
-
-					var extType uint8
-					if err := binary.Read(extReader, binary.BigEndian, &extType); err != nil {
-						return nil, fmt.Errorf("reading ct extension type: %w", err)
-					}
-					ctExt.ExtensionType = extType
-
-					switch extType {
-					case extensionTypeLeafIndex:
-						var leafIndexLen uint16
-						if err := binary.Read(extReader, binary.BigEndian, &leafIndexLen); err != nil {
-							return nil, fmt.Errorf("reading leaf index ct extension length: %w", err)
-						}
-						if leafIndexLen != 5 {
-							return nil, fmt.Errorf("invalid leaf index length: %d", leafIndexLen)
-						}
-
-						leafIndex, err := readUint40(extReader)
-						if err != nil {
-							return nil, fmt.Errorf("reading leaf index in ct extension type %d: %w", extensionTypeLeafIndex, err)
-						}
-						ctExt.ExtensionValue = leafIndex
-
-						slog.Debug("parseCtExtensions", "extType", extType, "leafIndex", leafIndex)
-					default:
-						// no-op. just ignore unknown extension for now.
-						// return nil, fmt.Errorf("unknown ct extension type: %d", extType)
-					}
-
-					if extReader.Len() > 0 {
-						return nil, fmt.Errorf("ct extension has %d unexpected trailing bytes", extReader.Len())
-					}
-
+				if ctExt.ExtensionLength != 0 {
 					sct.CtExtensions = append(sct.CtExtensions, ctExt)
 				}
 
