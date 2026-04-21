@@ -49,7 +49,7 @@ func parseSignedEntry(r *bytes.Reader, de *DataEntry, entryType uint16) ([]byte,
 		de.EntryType = "x509"
 	case entryTypePrecert:
 		de.EntryType = "precert"
-		var issuerKeyHash [32]byte // 32 bytes issuer key hash
+		var issuerKeyHash [32]byte // 32 bytes issuer key hash, only in case of precert
 		if _, err := io.ReadFull(r, issuerKeyHash[:]); err != nil {
 			return nil, fmt.Errorf("reading issuer key hash: %w", err)
 		}
