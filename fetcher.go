@@ -159,20 +159,15 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 	}, nil
 }
 
-func buildIndex(leafIndex uint64, log *CachedLog) (string, error) {
-	cp, err := fetchCheckpoint(log)
-	if err != nil {
-		return "", err
-	}
-
+func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 	tileIndex := leafIndex / 256
-	maxTileIndex := (cp.TreeSize - 1) / 256
+	maxTileIndex := (treeSize - 1) / 256
 	var partialIndex uint64 = 0
 	if tileIndex == maxTileIndex {
-		partialIndex = cp.TreeSize % 256
+		partialIndex = treeSize % 256
 	}
 	if tileIndex > maxTileIndex {
-		return "", fmt.Errorf("invalid index size %d (greater than current tree size %d)", leafIndex, cp.TreeSize)
+		return "", fmt.Errorf("invalid index size %d (greater than current tree size %d)", leafIndex, treeSize)
 	}
 
 	slog.Debug("buildIndex", "leaf_index", leafIndex, "tile_index", tileIndex, "partial_index", partialIndex)
@@ -199,7 +194,11 @@ func buildIndex(leafIndex uint64, log *CachedLog) (string, error) {
 }
 
 func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
-	tileIndexPath, err := buildIndex(leafIndex, log)
+	cp, err := fetchCheckpoint(log)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch checkpoint: %w", err)
+	}
+	tileIndexPath, err := buildIndex(leafIndex, cp.TreeSize)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get index path: %w", err)
 	}
