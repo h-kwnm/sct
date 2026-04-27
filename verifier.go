@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -111,6 +112,14 @@ func getTilePaths(ap AuditPath) []string {
 }
 
 func fetchTile(url string) ([]byte, error) {
+	cache, err := loadTileCache(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cache: %w", err)
+	}
+	if cache != nil {
+		return cache, nil
+	}
+
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a request: %s, %w", url, err)
@@ -130,6 +139,10 @@ func fetchTile(url string) ([]byte, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read HTTP response body: %s, %w", url, err)
+	}
+
+	if !strings.Contains(url, ".p/") {
+		saveTileCache(url, body)
 	}
 
 	return body, nil
