@@ -36,7 +36,7 @@ func runData(args []string) {
 
 	entries, err := parseDataTile(tile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse data tile: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to parse data tile: %v\n", err)
 		os.Exit(1)
 	}
 
