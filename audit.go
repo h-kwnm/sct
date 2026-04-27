@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -41,9 +40,6 @@ func runAudit(args []string) {
 
 	for s, t := range tiles {
 		fmt.Printf("tile: %s, size=%d\n", s, len(t.Hashes))
-		for j, h := range t.Hashes {
-			fmt.Printf("- hash %d: %x\n", j, sha256.Sum256(h[:]))
-		}
 	}
 
 	res, err := verifyInclusion(auditPath, tiles, cp)

@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/bits"
@@ -110,19 +109,40 @@ func buildTileIndex(tileIndex uint64, level int, treeSize uint64) string {
 	return indexStr
 }
 
-func getTilePaths(ap AuditPath) []string {
-	t := map[string]bool{}
-	var paths []string
-
-	t[ap.LeafTilePath] = true
-	paths = append(paths, ap.LeafTilePath)
-	for _, node := range ap.Nodes {
-		if _, ok := t[node.NodeTilePath]; !ok {
-			t[node.NodeTilePath] = true
-			paths = append(paths, node.NodeTilePath)
-		}
+// collectNodeTilePaths adds to pathSet all tile paths needed to compute the
+// hash of the subtree [start, end) in a tree of size n.
+func collectNodeTilePaths(start, end, n uint64, pathSet map[string]bool) {
+	size := end - start
+	if size == 1 {
+		p := buildTileIndex(start/tileWidth, 0, n)
+		pathSet[p] = true
+		return
 	}
+	h := bits.Len64(size - 1)
+	if size == 1<<h {
+		// complete subtree: one tile entry at level h/tileBitWidth
+		level := h / tileBitWidth
+		tileIndex := (start >> (tileBitWidth * level)) / tileWidth
+		p := buildTileIndex(tileIndex, level, n)
+		pathSet[p] = true
+		return
+	}
+	// non-power-of-2: split into complete left half and smaller right half
+	k := uint64(1) << (h - 1)
+	collectNodeTilePaths(start, start+k, n, pathSet)
+	collectNodeTilePaths(start+k, end, n, pathSet)
+}
 
+func getTilePaths(ap AuditPath) []string {
+	pathSet := map[string]bool{}
+	collectNodeTilePaths(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, pathSet)
+	for _, node := range ap.Nodes {
+		collectNodeTilePaths(node.Start, node.End, ap.TreeSize, pathSet)
+	}
+	var paths []string
+	for p := range pathSet {
+		paths = append(paths, p)
+	}
 	return paths
 }
 
@@ -192,11 +212,6 @@ func fetchTiles(ap AuditPath, log *CachedLog) (map[string]Tile, error) {
 	}
 	wg.Wait()
 
-	j, err := json.MarshalIndent(results, "", "  ")
-	if err != nil {
-		fmt.Println(string(j))
-	}
-
 	tiles := make(map[string]Tile, len(results))
 	for _, res := range results {
 		if res.err != nil {
@@ -231,35 +246,45 @@ func computeMth(hashes [][32]byte) [32]byte {
 	return merkleHash(computeMth(hashes[:l/2]), computeMth(hashes[l/2:]))
 }
 
+// computeNodeHash returns the Merkle hash of the subtree [start, end) using
+// the already-fetched tiles map. It recursively decomposes non-power-of-2
+// ranges so every tile read covers an exact complete subtree.
+func computeNodeHash(start, end, n uint64, tiles map[string]Tile) [32]byte {
+	size := end - start
+	if size == 1 {
+		tileIndex := start / tileWidth
+		p := buildTileIndex(tileIndex, 0, n)
+		return tiles[p].Hashes[start%tileWidth]
+	}
+	h := bits.Len64(size - 1)
+	if size == 1<<h {
+		level := h / tileBitWidth
+		nodeIndex := start >> (tileBitWidth * level)
+		tileIndex := nodeIndex / tileWidth
+		p := buildTileIndex(tileIndex, level, n)
+		count := 1 << (h % tileBitWidth)
+		offset := int(nodeIndex % tileWidth)
+		return computeMth(tiles[p].Hashes[offset : offset+count])
+	}
+	k := uint64(1) << (h - 1)
+	return merkleHash(computeNodeHash(start, start+k, n, tiles), computeNodeHash(start+k, end, n, tiles))
+}
+
 func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (bool, error) {
-	current := tiles[ap.LeafTilePath].Hashes[ap.Offset]
-	fmt.Printf("[debug] leaf hash: %x\n", current)
+	current := computeNodeHash(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, tiles)
 
-	for i, node := range ap.Nodes {
-		p := node.NodeTilePath
-		offset := int(node.Offset)
-		count := node.Count
-		slice := tiles[p].Hashes[offset : offset+count]
-		sibling := computeMth(slice)
-
-		var dir string
+	for _, node := range ap.Nodes {
+		sibling := computeNodeHash(node.Start, node.End, ap.TreeSize, tiles)
 		if ap.LeafIndex < node.Start {
 			current = merkleHash(current, sibling)
-			dir = "current|sibling"
 		} else {
 			current = merkleHash(sibling, current)
-			dir = "sibling|current"
 		}
-		fmt.Printf("[debug] step %d: [%d,%d) level=%d count=%d dir=%s → %x\n",
-			i, node.Start, node.End, node.Level, count, dir, current)
 	}
 
 	rootHash, err := base64.StdEncoding.DecodeString(cp.RootHash)
 	if err != nil {
 		return false, err
 	}
-
-	fmt.Printf("[debug] computed: %x\n", current)
-	fmt.Printf("[debug] expected: %x\n", rootHash)
 	return current == [32]byte(rootHash), nil
 }
