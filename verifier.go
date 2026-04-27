@@ -7,12 +7,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"maps"
 	"math/bits"
 	"net/http"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
+	"time"
 )
 
 const tileBitWidth = 8              // 8
@@ -141,9 +142,9 @@ func fetchTile(url string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read HTTP response body: %s, %w", url, err)
 	}
 
-	if !strings.Contains(url, ".p/") {
-		saveTileCache(url, body)
-	}
+	// intentionally cache partial tiles although it is not recommended.
+	// partial tiles are not used since relevant tiles are identified during each invocations.
+	saveTileCache(url, body)
 
 	return body, nil
 }
@@ -247,7 +248,7 @@ func computeNodeHash(start, end, n uint64, tiles map[string]Tile) [32]byte {
 	return merkleHash(computeNodeHash(start, start+k, n, tiles), computeNodeHash(start+k, end, n, tiles))
 }
 
-func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (bool, error) {
+func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (AuditResult, error) {
 	current := computeNodeHash(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, tiles)
 
 	for _, node := range ap.Nodes {
@@ -261,7 +262,13 @@ func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (bool, 
 
 	rootHash, err := base64.StdEncoding.DecodeString(cp.RootHash)
 	if err != nil {
-		return false, err
+		return AuditResult{}, err
 	}
-	return current == [32]byte(rootHash), nil
+	return AuditResult{
+		Timestamp:           time.Now().UTC(),
+		Origin:              cp.Origin,
+		VerificationSuccess: current == [32]byte(rootHash),
+		AuditPath:           ap,
+		TilePaths:           slices.Collect(maps.Keys(tiles)),
+	}, nil
 }

@@ -38,17 +38,19 @@ func runAudit(args []string) {
 		os.Exit(1)
 	}
 
-	for s, t := range tiles {
-		fmt.Printf("tile: %s, size=%d\n", s, len(t.Hashes))
-	}
-
 	res, err := verifyInclusion(auditPath, tiles, cp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error during verification: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("verification result: %v\n", res)
+	j, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to marshal audit verification result: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(string(j))
 }
 
 func runAuditPath(args []string) {

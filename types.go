@@ -246,3 +246,11 @@ type AuditPath struct {
 type Tile struct {
 	Hashes [][32]byte
 }
+
+type AuditResult struct {
+	Timestamp           time.Time `json:"timestamp"`
+	Origin              string    `json:"origin"`
+	VerificationSuccess bool      `json:"verification_success"`
+	AuditPath           AuditPath `json:"audit_path"`
+	TilePaths           []string  `json:"tiles"`
+}
