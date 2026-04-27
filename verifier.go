@@ -136,7 +136,7 @@ func fetchTile(url string) ([]byte, error) {
 		return nil, fmt.Errorf("unexpected response status code: %s, %d", url, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 16<<10))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read HTTP response body: %s, %w", url, err)
 	}
