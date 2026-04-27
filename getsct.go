@@ -26,6 +26,7 @@ func runGetSct(args []string) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
 		fmt.Fprintf(os.Stderr, "failed to decode pem file: %v", *pemFile)
+		os.Exit(1)
 	}
 
 	sct, err := parseCertSCT(block.Bytes)
