@@ -41,6 +41,12 @@ func main() {
 	case "get-sct":
 		runGetSct(args[1:])
 		return
+	case "audit":
+		runAudit(args[1:])
+		return
+	case "audit-path":
+		runAuditPath(args[1:])
+		return
 	case "version":
 		fmt.Println(version)
 		return
