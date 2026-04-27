@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"math/bits"
 	"testing"
 )
 
@@ -74,6 +77,172 @@ func TestBuildTileIndex(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- verifyInclusion ---
+
+// testLeaves returns n deterministic leaf hashes using sha256([]byte{i}).
+func testLeaves(n int) [][32]byte {
+	hashes := make([][32]byte, n)
+	for i := range hashes {
+		hashes[i] = sha256.Sum256([]byte{byte(i)})
+	}
+	return hashes
+}
+
+// testMTH computes the Merkle tree root of a list of leaf hashes following
+// RFC 6962: split at the largest power of 2 less than n.
+func testMTH(hashes [][32]byte) [32]byte {
+	if len(hashes) == 1 {
+		return hashes[0]
+	}
+	k := 1 << (bits.Len(uint(len(hashes)-1)) - 1)
+	return merkleHash(testMTH(hashes[:k]), testMTH(hashes[k:]))
+}
+
+// testCheckpoint builds a Checkpoint whose root matches the given leaf hashes.
+func testCheckpoint(leaves [][32]byte) Checkpoint {
+	root := testMTH(leaves)
+	return Checkpoint{
+		Origin:   "test.example.com/log",
+		TreeSize: uint64(len(leaves)),
+		RootHash: base64.StdEncoding.EncodeToString(root[:]),
+	}
+}
+
+// testTiles builds the tiles map for a single-tile tree (n ≤ 256).
+func testTiles(leaves [][32]byte, n uint64) map[string]Tile {
+	return map[string]Tile{
+		buildTileIndex(0, 0, n): {Hashes: leaves},
+	}
+}
+
+func TestVerifyInclusion(t *testing.T) {
+	verify := func(t *testing.T, m uint64, leaves [][32]byte, tiles map[string]Tile) bool {
+		t.Helper()
+		ap := getAuditPath(m, uint64(len(leaves)))
+		res, err := verifyInclusion(ap, tiles, testCheckpoint(leaves))
+		if err != nil {
+			t.Fatalf("verifyInclusion error: %v", err)
+		}
+		return res.VerificationSuccess
+	}
+
+	// Single tile cases (n ≤ 256): leaf hashes all fit in tile/0/000[.p/n].
+	t.Run("single leaf n=1", func(t *testing.T) {
+		leaves := testLeaves(1)
+		if !verify(t, 0, leaves, testTiles(leaves, 1)) {
+			t.Error("want true")
+		}
+	})
+
+	for _, tc := range []struct {
+		name string
+		n    int
+		m    uint64
+	}{
+		// power-of-2 sizes
+		{"n=2 m=0", 2, 0},
+		{"n=2 m=1", 2, 1},
+		{"n=4 m=0", 4, 0},
+		{"n=4 m=1", 4, 1},
+		{"n=4 m=2", 4, 2},
+		{"n=4 m=3", 4, 3},
+		// non-power-of-2: right-branch sibling is a non-complete subtree
+		{"n=3 m=0", 3, 0},
+		{"n=3 m=1", 3, 1},
+		{"n=3 m=2", 3, 2},
+		{"n=5 m=4", 5, 4},
+		{"n=7 m=0", 7, 0},
+		{"n=7 m=3", 7, 3},
+		{"n=7 m=6", 7, 6},
+		// larger non-power-of-2
+		{"n=100 m=0", 100, 0},
+		{"n=100 m=49", 100, 49},
+		{"n=100 m=99", 100, 99},
+		// just below tile boundary
+		{"n=255 m=0", 255, 0},
+		{"n=255 m=127", 255, 127},
+		{"n=255 m=254", 255, 254},
+		// exactly one full tile: no .p suffix on tile path
+		{"n=256 m=0", 256, 0},
+		{"n=256 m=128", 256, 128},
+		{"n=256 m=255", 256, 255},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			leaves := testLeaves(tc.n)
+			if !verify(t, tc.m, leaves, testTiles(leaves, uint64(tc.n))) {
+				t.Error("want true")
+			}
+		})
+	}
+
+	// Cross-tile: n=257 forces a level-1 tile for the sibling [0,256).
+	t.Run("cross-tile n=257 m=256", func(t *testing.T) {
+		leaves := testLeaves(257)
+		const n = uint64(257)
+		tiles := map[string]Tile{
+			buildTileIndex(0, 0, n): {Hashes: leaves[0:256]},
+			buildTileIndex(1, 0, n): {Hashes: leaves[256:257]},
+			buildTileIndex(0, 1, n): {Hashes: [][32]byte{computeMth(leaves[0:256])}},
+		}
+		if !verify(t, 256, leaves, tiles) {
+			t.Error("want true")
+		}
+	})
+
+	// Failure: root hash does not match.
+	t.Run("wrong root returns false", func(t *testing.T) {
+		leaves := testLeaves(7)
+		wrong := sha256.Sum256([]byte("wrong"))
+		cp := Checkpoint{
+			Origin:   "test.example.com/log",
+			TreeSize: 7,
+			RootHash: base64.StdEncoding.EncodeToString(wrong[:]),
+		}
+		ap := getAuditPath(3, 7)
+		res, err := verifyInclusion(ap, testTiles(leaves, 7), cp)
+		if err != nil {
+			t.Fatalf("verifyInclusion error: %v", err)
+		}
+		if res.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
+
+	// Failure: the leaf being verified has been tampered.
+	t.Run("tampered verified leaf returns false", func(t *testing.T) {
+		leaves := testLeaves(7)
+		tampered := make([][32]byte, len(leaves))
+		copy(tampered, leaves)
+		tampered[3] = sha256.Sum256([]byte("tampered"))
+		ap := getAuditPath(3, 7)
+		// checkpoint root is from original leaves; tile contains the tampered hash
+		res, err := verifyInclusion(ap, testTiles(tampered, 7), testCheckpoint(leaves))
+		if err != nil {
+			t.Fatalf("verifyInclusion error: %v", err)
+		}
+		if res.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
+
+	// Failure: a sibling tile entry has been tampered (leaf being verified is untouched).
+	t.Run("tampered sibling returns false", func(t *testing.T) {
+		leaves := testLeaves(7)
+		tampered := make([][32]byte, len(leaves))
+		copy(tampered, leaves)
+		tampered[0] = sha256.Sum256([]byte("tampered")) // sibling of leaf 3
+		// checkpoint root is computed from untampered leaves
+		ap := getAuditPath(3, 7)
+		res, err := verifyInclusion(ap, testTiles(tampered, 7), testCheckpoint(leaves))
+		if err != nil {
+			t.Fatalf("verifyInclusion error: %v", err)
+		}
+		if res.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
 }
 
 // --- getAuditPath ---

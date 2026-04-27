@@ -247,10 +247,22 @@ type Tile struct {
 	Hashes [][32]byte
 }
 
+// IndexRange describes a contiguous slice of hashes read from one tile:
+// hashes[Offset : Offset+Count].
+type IndexRange struct {
+	Offset int `json:"offset"`
+	Count  int `json:"count"`
+}
+
+type TileAccess struct {
+	Path    string       `json:"path"`
+	Indices []IndexRange `json:"indices"`
+}
+
 type AuditResult struct {
-	Timestamp           time.Time `json:"timestamp"`
-	Origin              string    `json:"origin"`
-	VerificationSuccess bool      `json:"verification_success"`
-	AuditPath           AuditPath `json:"audit_path"`
-	TilePaths           []string  `json:"tiles"`
+	Timestamp           time.Time    `json:"timestamp"`
+	Origin              string       `json:"origin"`
+	VerificationSuccess bool         `json:"verification_success"`
+	AuditPath           AuditPath    `json:"audit_path"`
+	Tiles               []TileAccess `json:"tiles"`
 }

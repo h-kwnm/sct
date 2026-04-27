@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"maps"
 	"math/bits"
 	"net/http"
 	"slices"
@@ -97,6 +96,29 @@ func collectNodeTilePaths(start, end, n uint64, pathSet map[string]bool) {
 	k := uint64(1) << (h - 1)
 	collectNodeTilePaths(start, start+k, n, pathSet)
 	collectNodeTilePaths(start+k, end, n, pathSet)
+}
+
+func collectNodeTileAccesses(start, end, n uint64, accesses map[string][]IndexRange) {
+	size := end - start
+	if size == 1 {
+		p := buildTileIndex(start/tileWidth, 0, n)
+		accesses[p] = append(accesses[p], IndexRange{Offset: int(start % tileWidth), Count: 1})
+		return
+	}
+	h := bits.Len64(size - 1)
+	if size == 1<<h {
+		level := h / tileBitWidth
+		nodeIndex := start >> (tileBitWidth * level)
+		tileIndex := nodeIndex / tileWidth
+		p := buildTileIndex(tileIndex, level, n)
+		count := 1 << (h % tileBitWidth)
+		offset := int(nodeIndex % tileWidth)
+		accesses[p] = append(accesses[p], IndexRange{Offset: offset, Count: count})
+		return
+	}
+	k := uint64(1) << (h - 1)
+	collectNodeTileAccesses(start, start+k, n, accesses)
+	collectNodeTileAccesses(start+k, end, n, accesses)
 }
 
 func getTilePaths(ap AuditPath) []string {
@@ -260,6 +282,16 @@ func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (AuditR
 		}
 	}
 
+	accesses := map[string][]IndexRange{}
+	collectNodeTileAccesses(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, accesses)
+	for _, node := range ap.Nodes {
+		collectNodeTileAccesses(node.Start, node.End, ap.TreeSize, accesses)
+	}
+	tileAccesses := make([]TileAccess, 0, len(accesses))
+	for path, ranges := range accesses {
+		tileAccesses = append(tileAccesses, TileAccess{Path: path, Indices: ranges})
+	}
+
 	rootHash, err := base64.StdEncoding.DecodeString(cp.RootHash)
 	if err != nil {
 		return AuditResult{}, err
@@ -269,6 +301,6 @@ func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (AuditR
 		Origin:              cp.Origin,
 		VerificationSuccess: current == [32]byte(rootHash),
 		AuditPath:           ap,
-		TilePaths:           slices.Collect(maps.Keys(tiles)),
+		Tiles:               tileAccesses,
 	}, nil
 }
