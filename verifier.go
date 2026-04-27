@@ -30,55 +30,19 @@ func getAuditPath(m uint64, n uint64) AuditPath {
 		var k uint64 = 1 << (bits.Len64(hi-lo-1) - 1)
 		mid := lo + k
 		if m < mid { // right branch
-			h := bits.Len64(hi - mid - 1)
-			level := h / tileBitWidth
-			count := 1 << (h % tileBitWidth)
-			nodeIndex := mid >> (tileBitWidth * level)
-			tileIndex := nodeIndex / tileWidth
-
-			var size uint64 = 1 << (tileBitWidth * level)
-			offset := (mid / size) % tileWidth
-			nodes = append(nodes, MthNode{
-				Start:         mid,
-				End:           hi,
-				Level:         level,
-				NodeIndex:     nodeIndex,
-				NodeTileIndex: tileIndex,
-				Offset:        offset,
-				Count:         count,
-				NodeTilePath:  buildTileIndex(tileIndex, level, n),
-			})
+			nodes = append(nodes, MthNode{Start: mid, End: hi})
 			hi = mid
-		} else { //left branch
-			h := bits.Len64(mid - lo - 1)
-			level := h / tileBitWidth
-			count := 1 << (h % tileBitWidth)
-			nodeIndex := lo >> (tileBitWidth * level)
-			tileIndex := nodeIndex / tileWidth
-
-			var size uint64 = 1 << (tileBitWidth * level)
-			offset := (lo / size) % tileWidth
-			nodes = append(nodes, MthNode{
-				Start:         lo,
-				End:           mid,
-				Level:         level,
-				NodeIndex:     nodeIndex,
-				NodeTileIndex: tileIndex,
-				Offset:        offset,
-				Count:         count,
-				NodeTilePath:  buildTileIndex(tileIndex, level, n),
-			})
+		} else { // left branch
+			nodes = append(nodes, MthNode{Start: lo, End: mid})
 			lo = mid
 		}
 	}
 	slices.Reverse(nodes)
 
 	return AuditPath{
-		LeafIndex:    m,
-		LeafTilePath: buildTileIndex(m/tileWidth, 0, n),
-		Offset:       m % tileWidth,
-		TreeSize:     n,
-		Nodes:        nodes,
+		LeafIndex: m,
+		TreeSize:  n,
+		Nodes:     nodes,
 	}
 }
 

@@ -233,22 +233,14 @@ type SCT struct {
 // https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#merkle-tree
 // <monitoring prefix>/tile/<L>/<N>[.p/<W>]
 type MthNode struct {
-	Start         uint64 `json:"start"`
-	End           uint64 `json:"end"`
-	Level         int    `json:"level"`
-	NodeIndex     uint64 `json:"node_index"` // index on the level
-	NodeTileIndex uint64 `json:"tile_index"`
-	NodeTilePath  string `json:"node_path"`
-	Offset        uint64 `json:"offset"`
-	Count         int    `json:"count"` // verification needs hashes between [Offset, Offset+Count]
+	Start uint64 `json:"start"`
+	End   uint64 `json:"end"`
 }
 
 type AuditPath struct {
-	LeafIndex    uint64    `json:"leaf_index"` // leaf node to be verified
-	LeafTilePath string    `json:"leaf_path"`
-	Offset       uint64    `json:"offset"`
-	TreeSize     uint64    `json:"tree_size"`
-	Nodes        []MthNode `json:"nodes"`
+	LeafIndex uint64    `json:"leaf_index"` // leaf node to be verified
+	TreeSize  uint64    `json:"tree_size"`
+	Nodes     []MthNode `json:"nodes"`
 }
 
 type Tile struct {
