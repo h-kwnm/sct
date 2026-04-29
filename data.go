@@ -56,31 +56,24 @@ func runData(args []string) {
 		fmt.Fprintf(os.Stderr, "leaf index %d not found in tile. note that the latest leaf index is (treeSize - 1) since tree size is 1-based and leaf index is 0-based\n", *index)
 	}
 
-	p, err := saveDataTileEntries(entries, log.MonitoringUrl, tileIndexPath, *outpath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to save data tile entries to file: %v\n", err)
-		os.Exit(1)
+	if *outpath != "" {
+		p, err := saveDataTileEntries(entries, log.MonitoringUrl, tileIndexPath, *outpath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to save data tile entries to file: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Fprintf(os.Stderr, "data tile entries saved to file: %s\n", p)
 	}
 
-	fmt.Printf("data tile entries saved to file: %s\n", p)
 }
 
 func buildDataOutputPath(outpath string, url string) (string, error) {
 	hash := sha256.Sum256([]byte(url))
 	unixEpoch := time.Now().UTC().Unix()
 	filename := fmt.Sprintf("data_%x_%d.json", hash[:8], unixEpoch)
-	dataTileFilepath := ""
-	if outpath == "" {
-		userCachePath, err := os.UserCacheDir()
-		if err != nil {
-			return "", err
-		}
-		dataTileFilepath = filepath.Join(userCachePath, "sct", filename)
-	} else {
-		dataTileFilepath = filepath.Join(outpath, filename)
-	}
 
-	return dataTileFilepath, nil
+	return filepath.Join(outpath, filename), nil
 }
 
 func saveDataTileEntries(entries []DataEntry, url string, tilePath string, outpath string) (string, error) {
