@@ -21,7 +21,7 @@ var httpClient = &http.Client{Timeout: 30 * time.Second}
 var logListUrl = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 
 // Some log operators could apply request rate limits. for example, Geomys's log has such a limit.
-// Cuustomize User-Agent to include an email address to mitigate such limits when needed.
+// Customize User-Agent to include an email address to mitigate such limits when needed.
 // https://groups.google.com/a/chromium.org/g/ct-policy/c/KCzYEIIZSxg/m/zD26fYw4AgAJ
 // Following is example of such User-Agent value.
 //
