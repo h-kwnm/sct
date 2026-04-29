@@ -37,23 +37,39 @@ sct checkpoint --log <id>
 ### `data` — Fetch a data tile
 
 Fetches the data tile containing the given leaf index, parses its entries, and prints it as JSON.
-Additionaly a data tile entries including the leaf is saved as a JSON file.
+Additionally, data tile entries including the leaf are saved as a JSON file when the `--out` option is specified.
 
 ```sh
 sct data --log <id> --index <leaf-index>
-sct data --log <id> --index <leaf-index> --out <dir>   # save to specific directory
+sct data --log <id> --index <leaf-index> --out <dir>   # save to specific directory, e.g., /tmp
 ```
-
-Output is written to `~/.cache/sct/` by default.
 
 ### `get-sct` — Extract SCT extension contents
 
-Extract SCT extension contents from a PEM-formatted certificate file and prints it as JSON.
+Extracts SCT extension contents from a PEM-formatted certificate file and prints them as JSON.
 
 ```sh
 sct get-sct --pem <pem-file>
 ```
 
+### `audit` — Verify whether the leaf at the given index is included in the log
+
+Verifies whether the leaf at the given index is included in the log.
+The verification result is reported in the `verification_success` field of the JSON-formatted output.
+The output includes information on which tiles and hashes are used for the verification.
+
+```sh
+sct audit --log <id> --index <leaf-index>
+```
+
+### `audit-path` — Print audit path for a specified combination of leaf index and tree size
+
+Prints the audit path in JSON format.
+This path consists of Merkle Tree Nodes in the form of `{"start":m,"end":n}`, which corresponds to `MTH[m,n]` format used in [RFC 6962's notation](https://www.rfc-editor.org/rfc/rfc6962#section-2.1.1).
+
+```sh
+sct audit-path --index <leaf-index> --size <tree-size>
+```
 
 ### `version` — Print version
 
@@ -65,10 +81,10 @@ sct version
 
 | Flag | Description |
 |------|-------------|
-| `-debug` | Enable debug logging (output to stderr) |
+| `--debug` | Enable debug logging (output to stderr) |
 
 ```sh
-sct -debug data --log <id> --index <leaf-index>
+sct --debug data --log <id> --index <leaf-index>
 ```
 
 ## Cache
