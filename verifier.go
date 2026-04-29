@@ -18,17 +18,17 @@ func getAuditPath(m uint64, n uint64) AuditPath {
 		return AuditPath{} // tree size(n) must be greater than leaf index(m)
 	}
 
-	nodes := []MthNode{}
+	nodes := []HashRange{}
 	var lo uint64 = 0
 	var hi uint64 = n
 	for hi-lo > 1 {
 		var k uint64 = 1 << (bits.Len64(hi-lo-1) - 1)
 		mid := lo + k
 		if m < mid { // right branch
-			nodes = append(nodes, MthNode{Start: mid, End: hi})
+			nodes = append(nodes, HashRange{Start: mid, End: hi})
 			hi = mid
 		} else { // left branch
-			nodes = append(nodes, MthNode{Start: lo, End: mid})
+			nodes = append(nodes, HashRange{Start: lo, End: mid})
 			lo = mid
 		}
 	}
