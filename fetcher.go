@@ -180,11 +180,11 @@ func formatTileString(index uint64, partialIndex uint64) string {
 }
 
 func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
-	tileIndex := leafIndex / 256
-	maxTileIndex := (treeSize - 1) / 256
+	tileIndex := leafIndex / tileWidth
+	maxTileIndex := (treeSize - 1) / tileWidth
 	var partialIndex uint64 = 0
 	if tileIndex == maxTileIndex {
-		partialIndex = treeSize % 256
+		partialIndex = treeSize % tileWidth
 	}
 	if tileIndex > maxTileIndex {
 		return "", fmt.Errorf("invalid index size %d (greater than current tree size %d)", leafIndex, treeSize)
