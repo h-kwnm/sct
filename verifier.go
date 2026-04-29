@@ -10,7 +10,6 @@ import (
 	"math/bits"
 	"net/http"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -48,30 +47,18 @@ func getAuditPath(m uint64, n uint64) AuditPath {
 }
 
 func buildTileIndex(tileIndex uint64, level int, treeSize uint64) string {
-	indexStr := fmt.Sprintf("tile/%d", level)
-
 	maxTileIndex := (treeSize - 1) / (tileWidth << (tileBitWidth * level))
 	var partialIndex uint64 = 0
 	if tileIndex == maxTileIndex {
 		partialIndex = (treeSize >> uint(tileBitWidth*level)) % tileWidth
 	}
 
-	var d uint64 = 1000
-	if tileIndex < d {
-		indexStr = fmt.Sprintf("%s/%03d", indexStr, tileIndex)
-	} else if tileIndex < d*d {
-		indexStr = fmt.Sprintf("%s/x%03d/%03d", indexStr, tileIndex/d, tileIndex%d)
-	} else if tileIndex < d*d*d {
-		indexStr = fmt.Sprintf("%s/x%03d/x%03d/%03d", indexStr, tileIndex/(d*d), (tileIndex/d)%d, tileIndex%d)
-	} else {
+	indexStr := formatTileString(tileIndex, partialIndex)
+	if indexStr == "" {
 		return ""
 	}
 
-	if partialIndex != 0 {
-		indexStr += ".p/" + strconv.FormatUint(partialIndex, 10)
-	}
-
-	return indexStr
+	return fmt.Sprintf("tile/%d/%s", level, indexStr)
 }
 
 // collectNodeTilePaths adds to pathSet all tile paths needed to compute the

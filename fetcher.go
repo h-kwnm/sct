@@ -159,6 +159,25 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 	}, nil
 }
 
+func formatTileString(index uint64, partialIndex uint64) string {
+	s := ""
+	if index < 1000 {
+		s = fmt.Sprintf("%03d", index)
+	} else if index < 1000*1000 {
+		s = fmt.Sprintf("x%03d/%03d", index/1000, index%1000)
+	} else if index < 1000*1000*1000 {
+		s = fmt.Sprintf("x%03d/x%03d/%03d", index/(1000*1000), (index/1000)%1000, index%1000)
+	} else {
+		return ""
+	}
+
+	if partialIndex != 0 {
+		s += ".p/" + strconv.FormatUint(partialIndex, 10)
+	}
+
+	return s
+}
+
 func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 	tileIndex := leafIndex / 256
 	maxTileIndex := (treeSize - 1) / 256
@@ -174,20 +193,7 @@ func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 
 	// <monitoring prefix>/tile/data/<N>[.p/<W>]
 	// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#log-entries
-	indexPath := ""
-	if tileIndex < 1000 {
-		indexPath = fmt.Sprintf("%03d", tileIndex)
-	} else if tileIndex < 1000*1000 {
-		indexPath = fmt.Sprintf("x%03d/%03d", tileIndex/1000, tileIndex%1000)
-	} else if tileIndex < 1000*1000*1000 {
-		indexPath = fmt.Sprintf("x%03d/x%03d/%03d", tileIndex/(1000*1000), (tileIndex/1000)%1000, tileIndex%1000)
-	} else {
-		return "", fmt.Errorf("failed to translate leaf index into index path, tile_index: %d", tileIndex)
-	}
-
-	if partialIndex != 0 {
-		indexPath += ".p/" + strconv.FormatUint(partialIndex, 10)
-	}
+	indexPath := formatTileString(tileIndex, partialIndex)
 	slog.Debug("buildIndex", "tile_index_path", indexPath)
 
 	return indexPath, nil
