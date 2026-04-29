@@ -121,7 +121,7 @@ func TestVerifyInclusion(t *testing.T) {
 	verify := func(t *testing.T, m uint64, leaves [][32]byte, tiles map[string]Tile) bool {
 		t.Helper()
 		ap := getAuditPath(m, uint64(len(leaves)))
-		res, err := verifyInclusion(ap, tiles, testCheckpoint(leaves))
+		res, err := verifyInclusion(ap, tiles, buildTileAccesses(ap), testCheckpoint(leaves))
 		if err != nil {
 			t.Fatalf("verifyInclusion error: %v", err)
 		}
@@ -201,7 +201,7 @@ func TestVerifyInclusion(t *testing.T) {
 			RootHash: base64.StdEncoding.EncodeToString(wrong[:]),
 		}
 		ap := getAuditPath(3, 7)
-		res, err := verifyInclusion(ap, testTiles(leaves, 7), cp)
+		res, err := verifyInclusion(ap, testTiles(leaves, 7), buildTileAccesses(ap), cp)
 		if err != nil {
 			t.Fatalf("verifyInclusion error: %v", err)
 		}
@@ -218,7 +218,7 @@ func TestVerifyInclusion(t *testing.T) {
 		tampered[3] = sha256.Sum256([]byte("tampered"))
 		ap := getAuditPath(3, 7)
 		// checkpoint root is from original leaves; tile contains the tampered hash
-		res, err := verifyInclusion(ap, testTiles(tampered, 7), testCheckpoint(leaves))
+		res, err := verifyInclusion(ap, testTiles(tampered, 7), buildTileAccesses(ap), testCheckpoint(leaves))
 		if err != nil {
 			t.Fatalf("verifyInclusion error: %v", err)
 		}
@@ -235,7 +235,7 @@ func TestVerifyInclusion(t *testing.T) {
 		tampered[0] = sha256.Sum256([]byte("tampered")) // sibling of leaf 3
 		// checkpoint root is computed from untampered leaves
 		ap := getAuditPath(3, 7)
-		res, err := verifyInclusion(ap, testTiles(tampered, 7), testCheckpoint(leaves))
+		res, err := verifyInclusion(ap, testTiles(tampered, 7), buildTileAccesses(ap), testCheckpoint(leaves))
 		if err != nil {
 			t.Fatalf("verifyInclusion error: %v", err)
 		}

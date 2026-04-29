@@ -32,13 +32,15 @@ func runAudit(args []string) {
 
 	auditPath := getAuditPath(*index, cp.TreeSize)
 
-	tiles, err := fetchTiles(auditPath, log)
+	accesses := buildTileAccesses(auditPath)
+
+	tiles, err := fetchTiles(accesses, log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to fetch tiles: %v\n", err)
 		os.Exit(1)
 	}
 
-	res, err := verifyInclusion(auditPath, tiles, cp)
+	res, err := verifyInclusion(auditPath, tiles, accesses, cp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error during verification: %v\n", err)
 		os.Exit(1)

@@ -56,30 +56,6 @@ func buildTileIndex(tileIndex uint64, level int, treeSize uint64) string {
 	return fmt.Sprintf("tile/%d/%s", level, indexStr)
 }
 
-// collectNodeTilePaths adds to pathSet all tile paths needed to compute the
-// hash of the subtree [start, end) in a tree of size n.
-func collectNodeTilePaths(start, end, n uint64, pathSet map[string]bool) {
-	size := end - start
-	if size == 1 {
-		p := buildTileIndex(start/tileWidth, 0, n)
-		pathSet[p] = true
-		return
-	}
-	h := bits.Len64(size - 1)
-	if size == 1<<h {
-		// complete subtree: one tile entry at level h/tileBitWidth
-		level := h / tileBitWidth
-		tileIndex := (start >> (tileBitWidth * level)) / tileWidth
-		p := buildTileIndex(tileIndex, level, n)
-		pathSet[p] = true
-		return
-	}
-	// non-power-of-2: split into complete left half and smaller right half
-	k := uint64(1) << (h - 1)
-	collectNodeTilePaths(start, start+k, n, pathSet)
-	collectNodeTilePaths(start+k, end, n, pathSet)
-}
-
 func collectNodeTileAccesses(start, end, n uint64, accesses map[string][]IndexRange) {
 	size := end - start
 	if size == 1 {
@@ -101,19 +77,6 @@ func collectNodeTileAccesses(start, end, n uint64, accesses map[string][]IndexRa
 	k := uint64(1) << (h - 1)
 	collectNodeTileAccesses(start, start+k, n, accesses)
 	collectNodeTileAccesses(start+k, end, n, accesses)
-}
-
-func getTilePaths(ap AuditPath) []string {
-	pathSet := map[string]bool{}
-	collectNodeTilePaths(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, pathSet)
-	for _, node := range ap.Nodes {
-		collectNodeTilePaths(node.Start, node.End, ap.TreeSize, pathSet)
-	}
-	var paths []string
-	for p := range pathSet {
-		paths = append(paths, p)
-	}
-	return paths
 }
 
 func merkleHash(left, right [32]byte) [32]byte {
@@ -157,7 +120,7 @@ func computeNodeHash(start, end, n uint64, tiles map[string]Tile) [32]byte {
 	return merkleHash(computeNodeHash(start, start+k, n, tiles), computeNodeHash(start+k, end, n, tiles))
 }
 
-func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (AuditResult, error) {
+func verifyInclusion(ap AuditPath, tiles map[string]Tile, accesses map[string][]IndexRange, cp Checkpoint) (AuditResult, error) {
 	current := computeNodeHash(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, tiles)
 
 	for _, node := range ap.Nodes {
@@ -169,11 +132,6 @@ func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (AuditR
 		}
 	}
 
-	accesses := map[string][]IndexRange{}
-	collectNodeTileAccesses(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, accesses)
-	for _, node := range ap.Nodes {
-		collectNodeTileAccesses(node.Start, node.End, ap.TreeSize, accesses)
-	}
 	tileAccesses := make([]TileAccess, 0, len(accesses))
 	for path, ranges := range accesses {
 		tileAccesses = append(tileAccesses, TileAccess{Path: path, Indices: ranges})
@@ -190,4 +148,14 @@ func verifyInclusion(ap AuditPath, tiles map[string]Tile, cp Checkpoint) (AuditR
 		AuditPath:           ap,
 		Tiles:               tileAccesses,
 	}, nil
+}
+
+func buildTileAccesses(ap AuditPath) map[string][]IndexRange {
+	accesses := map[string][]IndexRange{}
+	collectNodeTileAccesses(ap.LeafIndex, ap.LeafIndex+1, ap.TreeSize, accesses)
+	for _, node := range ap.Nodes {
+		collectNodeTileAccesses(node.Start, node.End, ap.TreeSize, accesses)
+	}
+
+	return accesses
 }

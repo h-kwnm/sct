@@ -281,21 +281,21 @@ type tileResult struct {
 	err  error
 }
 
-func fetchTiles(ap AuditPath, log *CachedLog) (map[string]Tile, error) {
-	paths := getTilePaths(ap)
-
-	results := make([]tileResult, len(paths))
+func fetchTiles(accesses map[string][]IndexRange, log *CachedLog) (map[string]Tile, error) {
+	results := make([]tileResult, len(accesses))
 	var wg sync.WaitGroup
 
-	for i, p := range paths {
-		url := log.MonitoringUrl + p
+	i := 0
+	for k := range accesses {
+		url := log.MonitoringUrl + k
 
 		wg.Add(1)
 		go func(i int, url string) {
 			defer wg.Done()
 			data, err := fetchTile(url)
-			results[i] = tileResult{p, data, err}
+			results[i] = tileResult{k, data, err}
 		}(i, url)
+		i++
 	}
 	wg.Wait()
 
