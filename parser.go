@@ -416,3 +416,20 @@ func parseCertSCT(derData []byte) ([]SCT, error) {
 
 	return scts, nil
 }
+
+func parseTile(r io.Reader) (Tile, error) {
+	tile := Tile{}
+	for {
+		var h = [32]byte{}
+		n, err := io.ReadFull(r, h[:])
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return Tile{}, fmt.Errorf("failed to read a tile at %d: %w", n, err)
+		}
+		tile.Hashes = append(tile.Hashes, h)
+	}
+
+	return tile, nil
+}

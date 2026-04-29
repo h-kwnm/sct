@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -235,4 +236,82 @@ func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
 	}
 
 	return body, tileIndexPath, nil
+}
+
+func fetchTile(url string) ([]byte, error) {
+	cache, err := loadTileCache(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cache: %w", err)
+	}
+	if cache != nil {
+		return cache, nil
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a request: %s, %w", url, err)
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch a tile: %s, %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected response status code: %s, %d", url, resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 16<<10))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read HTTP response body: %s, %w", url, err)
+	}
+
+	// intentionally cache partial tiles although it is not recommended.
+	// partial tiles are not used since relevant tiles are identified during each invocations.
+	saveTileCache(url, body)
+
+	return body, nil
+}
+
+type tileResult struct {
+	path string
+	data []byte
+	err  error
+}
+
+func fetchTiles(ap AuditPath, log *CachedLog) (map[string]Tile, error) {
+	paths := getTilePaths(ap)
+
+	results := make([]tileResult, len(paths))
+	var wg sync.WaitGroup
+
+	for i, p := range paths {
+		url := log.MonitoringUrl + p
+
+		wg.Add(1)
+		go func(i int, url string) {
+			defer wg.Done()
+			data, err := fetchTile(url)
+			results[i] = tileResult{p, data, err}
+		}(i, url)
+	}
+	wg.Wait()
+
+	tiles := make(map[string]Tile, len(results))
+	for _, res := range results {
+		if res.err != nil {
+			return nil, res.err
+		}
+		reader := bytes.NewReader(res.data)
+
+		tile, err := parseTile(reader)
+		if err != nil {
+			return nil, fmt.Errorf("fetchTiles: %s, %w", res.path, err)
+		}
+		tiles[res.path] = tile
+	}
+
+	return tiles, nil
 }

@@ -1,16 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"math/bits"
-	"net/http"
 	"slices"
-	"sync"
 	"time"
 )
 
@@ -119,101 +114,6 @@ func getTilePaths(ap AuditPath) []string {
 		paths = append(paths, p)
 	}
 	return paths
-}
-
-func fetchTile(url string) ([]byte, error) {
-	cache, err := loadTileCache(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load cache: %w", err)
-	}
-	if cache != nil {
-		return cache, nil
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a request: %s, %w", url, err)
-	}
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch a tile: %s, %w", url, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("unexpected response status code: %s, %d", url, resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 16<<10))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read HTTP response body: %s, %w", url, err)
-	}
-
-	// intentionally cache partial tiles although it is not recommended.
-	// partial tiles are not used since relevant tiles are identified during each invocations.
-	saveTileCache(url, body)
-
-	return body, nil
-}
-
-func parseTile(r io.Reader) (Tile, error) {
-	tile := Tile{}
-	for {
-		var h = [32]byte{}
-		n, err := io.ReadFull(r, h[:])
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return Tile{}, fmt.Errorf("failed to read a tile at %d: %w", n, err)
-		}
-		tile.Hashes = append(tile.Hashes, h)
-	}
-
-	return tile, nil
-}
-
-type tileResult struct {
-	path string
-	data []byte
-	err  error
-}
-
-func fetchTiles(ap AuditPath, log *CachedLog) (map[string]Tile, error) {
-	paths := getTilePaths(ap)
-
-	results := make([]tileResult, len(paths))
-	var wg sync.WaitGroup
-
-	for i, p := range paths {
-		url := log.MonitoringUrl + p
-
-		wg.Add(1)
-		go func(i int, url string) {
-			defer wg.Done()
-			data, err := fetchTile(url)
-			results[i] = tileResult{p, data, err}
-		}(i, url)
-	}
-	wg.Wait()
-
-	tiles := make(map[string]Tile, len(results))
-	for _, res := range results {
-		if res.err != nil {
-			return nil, res.err
-		}
-		reader := bytes.NewReader(res.data)
-
-		tile, err := parseTile(reader)
-		if err != nil {
-			return nil, fmt.Errorf("fetchTiles: %s, %w", res.path, err)
-		}
-		tiles[res.path] = tile
-	}
-
-	return tiles, nil
 }
 
 func merkleHash(left, right [32]byte) [32]byte {
