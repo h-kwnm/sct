@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"math/bits"
 	"slices"
 	"time"
@@ -24,6 +25,7 @@ func getAuditPath(m uint64, n uint64) AuditPath {
 	for hi-lo > 1 {
 		var k uint64 = 1 << (bits.Len64(hi-lo-1) - 1)
 		mid := lo + k
+		slog.Debug("getAuditPath", "n", n, "m", m, "hi", hi, "mid", mid, "lo", lo, "k", k)
 		if m < mid { // right branch
 			nodes = append(nodes, HashRange{Start: mid, End: hi})
 			hi = mid
