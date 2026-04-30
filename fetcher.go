@@ -179,7 +179,7 @@ func formatTileString(index uint64, partialIndex uint64) string {
 	return s
 }
 
-func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
+func buildIndex(leafIndex uint64, treeSize uint64) string {
 	tileIndex := leafIndex / tileWidth
 	maxTileIndex := (treeSize - 1) / tileWidth
 	var partialIndex uint64 = 0
@@ -187,7 +187,7 @@ func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 		partialIndex = treeSize % tileWidth
 	}
 	if tileIndex > maxTileIndex {
-		return "", fmt.Errorf("invalid index size %d (greater than current tree size %d)", leafIndex, treeSize)
+		return ""
 	}
 
 	slog.Debug("buildIndex", "leaf_index", leafIndex, "tile_index", tileIndex, "partial_index", partialIndex)
@@ -197,7 +197,7 @@ func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 	indexPath := formatTileString(tileIndex, partialIndex)
 	slog.Debug("buildIndex", "tile_index_path", indexPath)
 
-	return indexPath, nil
+	return indexPath
 }
 
 func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
@@ -205,9 +205,9 @@ func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch checkpoint: %w", err)
 	}
-	tileIndexPath, err := buildIndex(leafIndex, cp.TreeSize)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get index path: %w", err)
+	tileIndexPath := buildIndex(leafIndex, cp.TreeSize)
+	if tileIndexPath == "" {
+		return nil, "", fmt.Errorf("failed to determine index path: leafIndex=%d, treeSize=%d", leafIndex, cp.TreeSize)
 	}
 
 	dataTileEndpoint := fmt.Sprintf("%stile/data/%s", log.MonitoringUrl, tileIndexPath)
