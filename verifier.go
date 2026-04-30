@@ -161,3 +161,15 @@ func buildTileAccesses(ap AuditPath) map[string][]IndexRange {
 
 	return accesses
 }
+
+func getAuditTiles(leafIndex, treeSize uint64) AuditTile {
+	ap := getAuditPath(leafIndex, treeSize)
+
+	accesses := buildTileAccesses(ap)
+
+	return AuditTile{
+		Tiles:     accesses,
+		LeafIndex: leafIndex,
+		TreeSize:  treeSize,
+	}
+}

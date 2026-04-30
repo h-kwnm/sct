@@ -47,6 +47,9 @@ func main() {
 	case "audit-path":
 		runAuditPath(args[1:])
 		return
+	case "audit-tile":
+		runAuditTile(args[1:])
+		return
 	case "version":
 		fmt.Println(version)
 		return

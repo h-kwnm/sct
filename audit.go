@@ -70,3 +70,21 @@ func runAuditPath(args []string) {
 	}
 	fmt.Println(string(j))
 }
+
+func runAuditTile(args []string) {
+	fs := flag.NewFlagSet("audit-tile", flag.ExitOnError)
+	index := fs.Uint64("index", 0, "leaf index")
+	size := fs.Uint64("size", 0, "tree size")
+	fs.Parse(args)
+
+	tiles := getAuditTiles(*index, *size)
+
+	j, err := json.MarshalIndent(tiles, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to marshal tile accesses as JSON\n")
+		os.Exit(1)
+	}
+
+	fmt.Println(string(j))
+
+}

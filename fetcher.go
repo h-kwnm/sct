@@ -162,12 +162,15 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 
 func formatTileString(index uint64, partialIndex uint64) string {
 	s := ""
-	if index < 1000 {
+	const k = 1000
+	if index < k {
 		s = fmt.Sprintf("%03d", index)
-	} else if index < 1000*1000 {
-		s = fmt.Sprintf("x%03d/%03d", index/1000, index%1000)
-	} else if index < 1000*1000*1000 {
-		s = fmt.Sprintf("x%03d/x%03d/%03d", index/(1000*1000), (index/1000)%1000, index%1000)
+	} else if index < k*k {
+		s = fmt.Sprintf("x%03d/%03d", index/k, index%k)
+	} else if index < k*k*k {
+		s = fmt.Sprintf("x%03d/x%03d/%03d", index/(k*k), (index/k)%k, index%k)
+	} else if index < k*k*k*k {
+		s = fmt.Sprintf("x%03d/x%03d/x%03d/%03d", index/(k*k*k), (index/(k*k))%k, (index/k)%k, index%k)
 	} else {
 		return ""
 	}

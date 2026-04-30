@@ -71,6 +71,15 @@ This path consists of Merkle Tree Nodes in the form of `{"start":m,"end":n}`, wh
 sct audit-path --index <leaf-index> --size <tree-size>
 ```
 
+### `audit-tile` — Print tiles for a specified combination of leaf index and tree size
+
+Prints the tiles in JSON format.
+The `tiles` field shows which tiles to fetch and which hash positions within each tile to use for proof verification.
+
+```sh
+sct audit-tile --index <leaf-index> --size <tree-size>
+```
+
 ### `version` — Print version
 
 ```sh

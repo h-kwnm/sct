@@ -243,6 +243,12 @@ type AuditPath struct {
 	Nodes     []HashRange `json:"nodes"`
 }
 
+type AuditTile struct {
+	LeafIndex uint64                  `json:"leaf_index"` // leaf node to be verified
+	TreeSize  uint64                  `json:"tree_size"`
+	Tiles     map[string][]IndexRange `json:"tiles"`
+}
+
 type Tile struct {
 	Hashes [][32]byte
 }

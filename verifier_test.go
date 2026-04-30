@@ -61,9 +61,15 @@ func TestBuildTileIndex(t *testing.T) {
 			want: "tile/0/x001/x000/000",
 		},
 		{
-			// tileIndex >= d^3 = 10^9 → returns empty string.
+			// tileIndex=10^9 triggers the triple x-prefix format.
 			name:      "tile index out of range returns empty string",
 			tileIndex: 1_000_000_000, level: 0, treeSize: 1_000_000_001*256 + 1,
+			want: "tile/0/x001/x000/x000/000",
+		},
+		{
+			// tileIndex >= 2^40 -> returns empty string.
+			name:      "tile index out of range returns empty string",
+			tileIndex: (1 << 40) + 1, level: 0, treeSize: (1 << 40) + 2,
 			want: "",
 		},
 	}
@@ -403,6 +409,264 @@ func TestGetAuditPath(t *testing.T) {
 				}
 				if n.End != wn.end {
 					t.Errorf("nodes[%d].End = %d, want %d", i, n.End, wn.end)
+				}
+			}
+		})
+	}
+}
+
+func TestGetAuditTile(t *testing.T) {
+	tests := []struct {
+		name      string
+		m, n      uint64
+		wantTiles map[string][]IndexRange
+	}{
+		{
+			name: "single tile",
+			m:    1, n: 16,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/000.p/16": {
+					IndexRange{Offset: 1, Count: 1},
+					IndexRange{Offset: 0, Count: 1},
+					IndexRange{Offset: 2, Count: 2},
+					IndexRange{Offset: 4, Count: 4},
+					IndexRange{Offset: 8, Count: 8},
+				},
+			},
+		},
+		{
+			name: "two tiles",
+			m:    1, n: 257,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/000": {
+					IndexRange{Offset: 1, Count: 1},
+					IndexRange{Offset: 0, Count: 1},
+					IndexRange{Offset: 2, Count: 2},
+					IndexRange{Offset: 4, Count: 4},
+					IndexRange{Offset: 8, Count: 8},
+					IndexRange{Offset: 16, Count: 16},
+					IndexRange{Offset: 32, Count: 32},
+					IndexRange{Offset: 64, Count: 64},
+					IndexRange{Offset: 128, Count: 128},
+				},
+				"tile/0/001.p/1": {
+					IndexRange{Offset: 0, Count: 1},
+				},
+			},
+		},
+		{
+			name: "two tiles, last leaf",
+			m:    257, n: 258,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/001.p/2": {
+					IndexRange{Offset: 1, Count: 1},
+					IndexRange{Offset: 0, Count: 1},
+				},
+				"tile/1/000.p/1": {
+					IndexRange{Offset: 0, Count: 1},
+				},
+			},
+		},
+		{
+			name: "leaf 1 in 2^40 tree",
+			m:    1, n: 1 << 40,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/000": {
+					{Offset: 1, Count: 1}, {Offset: 0, Count: 1},
+					{Offset: 2, Count: 2}, {Offset: 4, Count: 4},
+					{Offset: 8, Count: 8}, {Offset: 16, Count: 16},
+					{Offset: 32, Count: 32}, {Offset: 64, Count: 64},
+					{Offset: 128, Count: 128},
+				},
+				"tile/1/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+				"tile/2/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+				"tile/3/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+				"tile/4/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+			},
+		},
+		{
+			name: "last leaf in 2^40 tree",
+			m:    (1 << 40) - 1, n: 1 << 40,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/x004/x294/x967/295": {
+					{Offset: 255, Count: 1}, {Offset: 254, Count: 1},
+					{Offset: 252, Count: 2}, {Offset: 248, Count: 4},
+					{Offset: 240, Count: 8}, {Offset: 224, Count: 16},
+					{Offset: 192, Count: 32}, {Offset: 128, Count: 64},
+					{Offset: 0, Count: 128},
+				},
+				"tile/1/x016/x777/215": {
+					{Offset: 254, Count: 1}, {Offset: 252, Count: 2},
+					{Offset: 248, Count: 4}, {Offset: 240, Count: 8},
+					{Offset: 224, Count: 16}, {Offset: 192, Count: 32},
+					{Offset: 128, Count: 64}, {Offset: 0, Count: 128},
+				},
+				"tile/2/x065/535": {
+					{Offset: 254, Count: 1}, {Offset: 252, Count: 2},
+					{Offset: 248, Count: 4}, {Offset: 240, Count: 8},
+					{Offset: 224, Count: 16}, {Offset: 192, Count: 32},
+					{Offset: 128, Count: 64}, {Offset: 0, Count: 128},
+				},
+				"tile/3/255": {
+					{Offset: 254, Count: 1}, {Offset: 252, Count: 2},
+					{Offset: 248, Count: 4}, {Offset: 240, Count: 8},
+					{Offset: 224, Count: 16}, {Offset: 192, Count: 32},
+					{Offset: 128, Count: 64}, {Offset: 0, Count: 128},
+				},
+				"tile/4/000": {
+					{Offset: 254, Count: 1}, {Offset: 252, Count: 2},
+					{Offset: 248, Count: 4}, {Offset: 240, Count: 8},
+					{Offset: 224, Count: 16}, {Offset: 192, Count: 32},
+					{Offset: 128, Count: 64}, {Offset: 0, Count: 128},
+				},
+			},
+		},
+		{
+			name: "last leaf in 2^32+1 tree",
+			m:    1 << 32, n: (1 << 32) + 1,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/x016/x777/216.p/1": {{Offset: 0, Count: 1}},
+				"tile/4/000.p/1":           {{Offset: 0, Count: 1}},
+			},
+		},
+		{
+			name: "leaf 1 in 2^32+1 tree",
+			m:    1, n: (1 << 32) + 1,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/000": {
+					{Offset: 1, Count: 1}, {Offset: 0, Count: 1},
+					{Offset: 2, Count: 2}, {Offset: 4, Count: 4},
+					{Offset: 8, Count: 8}, {Offset: 16, Count: 16},
+					{Offset: 32, Count: 32}, {Offset: 64, Count: 64},
+					{Offset: 128, Count: 128},
+				},
+				"tile/0/x016/x777/216.p/1": {{Offset: 0, Count: 1}},
+				"tile/1/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+				"tile/2/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+				"tile/3/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+			},
+		},
+		{
+			name: "last leaf in 2^24+1 tree",
+			m:    1 << 24, n: (1 << 24) + 1,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/x065/536.p/1": {{Offset: 0, Count: 1}},
+				"tile/3/000.p/1":      {{Offset: 0, Count: 1}},
+			},
+		},
+		{
+			name: "leaf 1 in 2^24+1 tree",
+			m:    1, n: (1 << 24) + 1,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/000": {
+					{Offset: 1, Count: 1}, {Offset: 0, Count: 1},
+					{Offset: 2, Count: 2}, {Offset: 4, Count: 4},
+					{Offset: 8, Count: 8}, {Offset: 16, Count: 16},
+					{Offset: 32, Count: 32}, {Offset: 64, Count: 64},
+					{Offset: 128, Count: 128},
+				},
+				"tile/0/x065/536.p/1": {{Offset: 0, Count: 1}},
+				"tile/1/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+				"tile/2/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+			},
+		},
+		{
+			name: "last leaf in 2^16+1 tree",
+			m:    1 << 16, n: (1 << 16) + 1,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/256.p/1": {{Offset: 0, Count: 1}},
+				"tile/2/000.p/1": {{Offset: 0, Count: 1}},
+			},
+		},
+		{
+			name: "leaf 1 in 2^16+1 tree",
+			m:    1, n: (1 << 16) + 1,
+			wantTiles: map[string][]IndexRange{
+				"tile/0/000": {
+					{Offset: 1, Count: 1}, {Offset: 0, Count: 1},
+					{Offset: 2, Count: 2}, {Offset: 4, Count: 4},
+					{Offset: 8, Count: 8}, {Offset: 16, Count: 16},
+					{Offset: 32, Count: 32}, {Offset: 64, Count: 64},
+					{Offset: 128, Count: 128},
+				},
+				"tile/0/256.p/1": {{Offset: 0, Count: 1}},
+				"tile/1/000": {
+					{Offset: 1, Count: 1}, {Offset: 2, Count: 2},
+					{Offset: 4, Count: 4}, {Offset: 8, Count: 8},
+					{Offset: 16, Count: 16}, {Offset: 32, Count: 32},
+					{Offset: 64, Count: 64}, {Offset: 128, Count: 128},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tiles := getAuditTiles(tt.m, tt.n)
+
+			if tiles.LeafIndex != tt.m {
+				t.Errorf("LeafIndex = %d, want %d", tiles.LeafIndex, tt.m)
+			}
+			if tiles.TreeSize != tt.n {
+				t.Errorf("TreeSize = %d, want %d", tiles.TreeSize, tt.n)
+			}
+			if len(tiles.Tiles) != len(tt.wantTiles) {
+				t.Fatalf("len(Tiles) = %d, want %d", len(tiles.Tiles), len(tt.wantTiles))
+			}
+
+			for k, wt := range tt.wantTiles {
+				if len(tiles.Tiles[k]) != len(wt) {
+					t.Fatalf("tile %s: got %d ranges, want %d", k, len(tiles.Tiles[k]), len(wt))
+				}
+				for i, v := range wt {
+					if tiles.Tiles[k][i] != v {
+						t.Errorf("tile[%d]=%v, want %v", i, tiles.Tiles[k][i], wt)
+					}
 				}
 			}
 		})
