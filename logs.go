@@ -11,6 +11,7 @@ func runLogs(args []string) {
 	fs := flag.NewFlagSet("logs", flag.ExitOnError)
 	refresh := fs.Bool("refresh", false, "re-fetch log list from Google")
 	state := fs.String("state", "", "filter by state (usable, readonly, retired, ...)")
+	apiType := fs.String("type", "", "filter by API type (static, rfc6962)")
 	fs.Parse(args)
 
 	// load/fetch log list
@@ -49,10 +50,20 @@ func runLogs(args []string) {
 		logs = filtered
 	}
 
+	if *apiType != "" {
+		filtered := logs[:0]
+		for _, log := range logs {
+			if string(log.APIType) == *apiType {
+				filtered = append(filtered, log)
+			}
+		}
+		logs = filtered
+	}
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tOPERATOR\tDESCRIPTION\tSTATE")
+	fmt.Fprintln(w, "ID\tAPI TYPE\tDESCRIPTION\tSTATE")
 	for _, log := range logs {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", log.Id, log.Operator, log.Description, log.State)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", log.Id, log.APIType, log.Description, log.State)
 	}
 	w.Flush()
 }

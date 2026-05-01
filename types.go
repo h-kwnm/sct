@@ -99,17 +99,30 @@ type SignedNoteSignature struct {
 
 // log cache
 
+type APIType string
+
+const (
+	APITypeStaticCT APIType = "static"
+	APITypeRFC6962  APIType = "rfc6962"
+)
+
 type CachedLog struct {
-	Id            int      `json:"id"`
-	Operator      string   `json:"operator"`
-	Description   string   `json:"description"`
-	LogId         string   `json:"log_id"`
-	Key           string   `json:"key"`
-	KeyId         string   `json:"key_id"`
-	Origin        string   `json:"origin"`
-	MonitoringUrl string   `json:"monitoring_url"`
-	SubmissionUrl string   `json:"submission_url"`
-	State         LogState `json:"state"`
+	Id          int      `json:"id"`
+	Operator    string   `json:"operator"`
+	Description string   `json:"description"`
+	LogId       string   `json:"log_id"`
+	Key         string   `json:"key"`
+	State       LogState `json:"state"`
+	APIType     APIType  `json:"api_type"`
+	// Static CT API
+	KeyId         string `json:"key_id,omitempty"`
+	Origin        string `json:"origin,omitempty"`
+	MonitoringUrl string `json:"monitoring_url,omitempty"`
+	SubmissionUrl string `json:"submission_url,omitempty"`
+	// ---
+	// RFC 6962
+	Url string `json:"url,omitempty"`
+	// ---
 }
 
 type LogCache struct {

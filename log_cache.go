@@ -70,6 +70,19 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 
 	id := 1
 	for _, operator := range logList.Operators {
+		for _, log := range operator.Logs {
+			cache.Logs = append(cache.Logs, CachedLog{
+				Id:          id,
+				Operator:    operator.Name,
+				Description: log.Description,
+				LogId:       log.LogId,
+				Key:         log.Key,
+				Url:         log.Url,
+				State:       log.State,
+				APIType:     APITypeRFC6962,
+			})
+			id++
+		}
 		for _, tiledLog := range operator.TiledLogs {
 			// this part intentionally assumes that "origin", "key name", and schema-less submission URL are the same.
 			// however this is not always true. according to the specification, "origin" SHOULD be schema-less URL
@@ -113,6 +126,7 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 				MonitoringUrl: tiledLog.MonitoringUrl,
 				SubmissionUrl: tiledLog.SubmissionUrl,
 				State:         tiledLog.State,
+				APIType:       APITypeStaticCT,
 			})
 			id++
 		}
