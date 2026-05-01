@@ -10,3 +10,10 @@ sct
 
 # Claude
 .claude
+CLAUDE.md
+
+# VS code
+.vscode
+
+# environment variables
+.env
