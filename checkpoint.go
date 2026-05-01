@@ -17,7 +17,7 @@ func runCheckpoint(args []string) {
 		os.Exit(1)
 	}
 
-	log, err := logById(*logId)
+	log, err := logById(*logId, APITypeStaticCT)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

@@ -135,7 +135,7 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 	return cache, nil
 }
 
-func logById(id int) (*CachedLog, error) {
+func logById(id int, apiType APIType) (*CachedLog, error) {
 	cache, err := loadLogCache()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load log cache: %w", err)
@@ -145,6 +145,9 @@ func logById(id int) (*CachedLog, error) {
 	}
 	for i := range cache.Logs {
 		if cache.Logs[i].Id == id {
+			if cache.Logs[i].APIType != apiType {
+				return nil, fmt.Errorf("unexpected log was specified(invalid API type: expected %s, but the log %d is %s type)", apiType, id, cache.Logs[i].APIType)
+			}
 			return &cache.Logs[i], nil
 		}
 	}
@@ -160,6 +163,7 @@ func logByLogId(logId string) (*CachedLog, error) {
 		return nil, fmt.Errorf("no log cache found, run 'sct logs' first")
 	}
 	for i := range cache.Logs {
+		// note: this is under assumptioin that the same key(log id) is not shared among multiple logs
 		if cache.Logs[i].LogId == logId {
 			return &cache.Logs[i], nil
 		}
