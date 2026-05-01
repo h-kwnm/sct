@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -10,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -317,4 +320,25 @@ func fetchTiles(accesses map[string][]IndexRange, log *CachedLog) (map[string]Ti
 	}
 
 	return tiles, nil
+}
+
+func fetchServerCertificate(endpoint string) (*x509.Certificate, error) {
+	u, err := url.Parse(endpoint)
+	var address string
+	if u.Port() == "" {
+		address = fmt.Sprintf("%s:443", u.Hostname())
+	} else {
+		address = fmt.Sprintf("%s:%s", u.Hostname(), u.Port())
+	}
+
+	conn, err := tls.Dial("tcp", address, &tls.Config{
+		InsecureSkipVerify: true, // no verification since the result do not matter here
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to %s: %w", endpoint, err)
+	}
+
+	certs := conn.ConnectionState().PeerCertificates
+
+	return certs[0], nil
 }

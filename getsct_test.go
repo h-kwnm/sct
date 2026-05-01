@@ -140,7 +140,12 @@ func TestParseCertSCTRealCert(t *testing.T) {
 		t.Fatal("failed to decode fixture PEM")
 	}
 
-	scts, err := parseCertSCT(block.Bytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal("failed to parse test certificate")
+	}
+
+	scts, err := parseCertSCT(cert)
 	if err != nil {
 		t.Fatalf("parseCertSCT() error = %v", err)
 	}
@@ -188,7 +193,12 @@ func TestParseCertSCTLeafIndex(t *testing.T) {
 		{logID: logID, tsMillis: wantTsMillis, leafIndex: wantLeafIndex},
 	})
 
-	scts, err := parseCertSCT(der)
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal("failed to parse test certificate")
+	}
+
+	scts, err := parseCertSCT(cert)
 	if err != nil {
 		t.Fatalf("parseCertSCT() error = %v", err)
 	}
@@ -223,7 +233,12 @@ func TestParseCertSCTEmptyExtensions(t *testing.T) {
 		{logID: logID, tsMillis: 1_700_000_000_000, leafIndex: 0},
 	})
 
-	scts, err := parseCertSCT(der)
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal("failed to parse test certificate")
+	}
+
+	scts, err := parseCertSCT(cert)
 	if err != nil {
 		t.Fatalf("parseCertSCT() error = %v", err)
 	}
@@ -249,7 +264,12 @@ func TestParseCertSCTMultipleSCTs(t *testing.T) {
 		{logID: logID2, tsMillis: 1_700_000_001_000, leafIndex: 99},
 	})
 
-	scts, err := parseCertSCT(der)
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal("failed to parse test certificate")
+	}
+
+	scts, err := parseCertSCT(cert)
 	if err != nil {
 		t.Fatalf("parseCertSCT() error = %v", err)
 	}
@@ -280,18 +300,16 @@ func TestParseCertSCTNoSCTExtension(t *testing.T) {
 		t.Fatalf("creating certificate: %v", err)
 	}
 
-	scts, err := parseCertSCT(der)
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal("failed to parse test certificate")
+	}
+
+	scts, err := parseCertSCT(cert)
 	if err != nil {
 		t.Fatalf("parseCertSCT() error = %v", err)
 	}
 	if len(scts) != 0 {
 		t.Errorf("got %d SCTs, want 0", len(scts))
-	}
-}
-
-func TestParseCertSCTInvalidDER(t *testing.T) {
-	_, err := parseCertSCT([]byte("not a certificate"))
-	if err == nil {
-		t.Error("expected error for invalid DER, got nil")
 	}
 }

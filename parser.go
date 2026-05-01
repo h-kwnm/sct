@@ -312,12 +312,7 @@ func parseDataTile(data []byte) ([]DataEntry, error) {
 
 var oidSCTList = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
 
-func parseCertSCT(derData []byte) ([]SCT, error) {
-	cert, err := x509.ParseCertificate(derData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse input certificate: %w", err)
-	}
-
+func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 	var sctListBytes []byte
 	var scts []SCT
 	for _, ext := range cert.Extensions {
