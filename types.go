@@ -223,10 +223,11 @@ type CtExtension struct {
 }
 
 type SCT struct {
-	Version      uint8         `json:"version"`
-	LogId        string        `json:"log_id"`
-	Timestamp    time.Time     `json:"timestamp"`
-	CtExtensions []CtExtension `json:"ct_extensions,omitempty"`
+	Version          uint8         `json:"version"`
+	LogId            string        `json:"log_id"`
+	LogIdDescription string        `json:"log_id_description"` // "description" the log in thelog list
+	Timestamp        time.Time     `json:"timestamp"`
+	CtExtensions     []CtExtension `json:"ct_extensions,omitempty"`
 }
 
 // inclustion proof verification

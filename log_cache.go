@@ -136,3 +136,19 @@ func logById(id int) (*CachedLog, error) {
 	}
 	return nil, fmt.Errorf("no log with id %d", id)
 }
+
+func logByLogId(logId string) (*CachedLog, error) {
+	cache, err := loadLogCache()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load log cache: %w", err)
+	}
+	if cache == nil {
+		return nil, fmt.Errorf("no log cache found, run 'sct logs' first")
+	}
+	for i := range cache.Logs {
+		if cache.Logs[i].LogId == logId {
+			return &cache.Logs[i], nil
+		}
+	}
+	return nil, fmt.Errorf("no log with log id %s", logId)
+}

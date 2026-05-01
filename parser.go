@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"time"
 )
 
@@ -312,7 +313,6 @@ func parseDataTile(data []byte) ([]DataEntry, error) {
 var oidSCTList = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
 
 func parseCertSCT(derData []byte) ([]SCT, error) {
-
 	cert, err := x509.ParseCertificate(derData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse input certificate: %w", err)
@@ -394,6 +394,12 @@ func parseCertSCT(derData []byte) ([]SCT, error) {
 				}
 				// allign the same format with "log_id" field in log_list.json
 				sct.LogId = base64.StdEncoding.EncodeToString(logId[:])
+				log, err := logByLogId(sct.LogId)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "log not found for log id %s: %v", sct.LogId, err)
+				} else {
+					sct.LogIdDescription = log.Description
+				}
 
 				var ts uint64
 				if err := binary.Read(sr, binary.BigEndian, &ts); err != nil {
