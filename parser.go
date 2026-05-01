@@ -391,7 +391,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				sct.LogId = base64.StdEncoding.EncodeToString(logId[:])
 				log, err := logByLogId(sct.LogId)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "log not found for log id %s: %v", sct.LogId, err)
+					fmt.Fprintf(os.Stderr, "log not found for log id %s: %v\n", sct.LogId, err)
 				} else {
 					sct.LogIdDescription = log.Description
 				}
