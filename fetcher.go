@@ -342,3 +342,37 @@ func fetchServerCertificate(endpoint string) (*x509.Certificate, error) {
 
 	return certs[0], nil
 }
+
+func fetchSth(log *CachedLog) (SignedTreeHead, error) {
+	u := strings.TrimSuffix(log.Url, "/")
+	endpoint := fmt.Sprintf("%s/ct/v1/get-sth", u)
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
+	if err != nil {
+		return SignedTreeHead{}, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return SignedTreeHead{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return SignedTreeHead{}, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<12))
+	if err != nil {
+		return SignedTreeHead{}, err
+	}
+
+	var data SignedTreeHead
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return SignedTreeHead{}, err
+	}
+
+	return data, nil
+}

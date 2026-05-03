@@ -50,6 +50,9 @@ func main() {
 	case "audit-tile":
 		runAuditTile(args[1:])
 		return
+	case "get-sth":
+		runGetSth(args[1:])
+		return
 	case "version":
 		fmt.Println(version)
 		return

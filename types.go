@@ -286,3 +286,19 @@ type AuditResult struct {
 	AuditPath           AuditPath    `json:"audit_path"`
 	Tiles               []TileAccess `json:"tiles"`
 }
+
+// RFC 6962
+
+type SthTimestamp uint64
+
+func (t SthTimestamp) MarshalJSON() ([]byte, error) {
+	s := time.UnixMilli(int64(t)).UTC().Format(time.RFC3339)
+	return json.Marshal(s)
+}
+
+type SignedTreeHead struct {
+	TreeSize          uint64       `json:"tree_size"`
+	Timestamp         SthTimestamp `json:"timestamp"`
+	RootHash          string       `json:"sha256_root_hash"`
+	TreeHeadSignature string       `json:"tree_head_signature"`
+}
