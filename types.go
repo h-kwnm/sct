@@ -1,9 +1,22 @@
 package main
 
 import (
+	"bytes"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"time"
+)
+
+const (
+	entryTypeX509    uint16 = 0
+	entryTypePrecert uint16 = 1
+)
+
+const (
+	extensionTypeLeafIndex uint8 = 0
 )
 
 // CT log
@@ -229,17 +242,25 @@ type DataTile struct {
 // Extension CtExtensions<0..2^16-1>;
 // uint8 uint40[5];
 // uint40 LeafIndex;
+
 type CtExtension struct {
 	ExtensionType   uint8  `json:"extension_type"`
 	ExtensionLength uint16 `json:"extension_length"`
 	ExtensionValue  uint64 `json:"extension_value"`
 }
 
+type SctTimestamp uint64
+
+func (t SctTimestamp) MarshalJSON() ([]byte, error) {
+	s := time.UnixMilli(int64(t)).UTC()
+	return json.Marshal(s)
+}
+
 type SCT struct {
 	Version          uint8         `json:"version"`
 	LogId            string        `json:"log_id"`
 	LogIdDescription string        `json:"log_id_description"` // "description" the log in thelog list
-	Timestamp        time.Time     `json:"timestamp"`
+	Timestamp        SctTimestamp  `json:"timestamp"`
 	CtExtensions     []CtExtension `json:"ct_extensions,omitempty"`
 }
 
@@ -292,7 +313,7 @@ type AuditResult struct {
 type SthTimestamp uint64
 
 func (t SthTimestamp) MarshalJSON() ([]byte, error) {
-	s := time.UnixMilli(int64(t)).UTC().Format(time.RFC3339)
+	s := time.UnixMilli(int64(t)).UTC()
 	return json.Marshal(s)
 }
 
@@ -301,4 +322,90 @@ type SignedTreeHead struct {
 	Timestamp         SthTimestamp `json:"timestamp"`
 	RootHash          string       `json:"sha256_root_hash"`
 	TreeHeadSignature string       `json:"tree_head_signature"`
+}
+
+type RFC6962Proof struct {
+	LeafIndex uint64   `json:"leaf_index"`
+	AuditPath []string `json:"audit_path"`
+}
+
+type TbsCertificate struct {
+	Raw                  asn1.RawContent
+	Version              asn1.RawValue `asn1:"optional,explicit,tag:0"`
+	SerialNumber         asn1.RawValue
+	SignatureAlgorithm   asn1.RawValue
+	Issuer               asn1.RawValue
+	Validity             asn1.RawValue
+	Subject              asn1.RawValue
+	SubjectPublicKeyInfo asn1.RawValue
+	Extensions           []pkix.Extension `asn1:"optional,explicit,tag:3"`
+}
+
+type Precert struct {
+	IssuerKeyHash     [32]byte
+	RawTbsCertificate []byte
+}
+
+func (p Precert) Marshal() []byte {
+	var b bytes.Buffer
+	if err := binary.Write(&b, binary.BigEndian, p.IssuerKeyHash[:]); err != nil {
+		panic(err)
+	}
+
+	// TBSCertificate has 3 bytes length header as defined below.
+	// opaque TBSCertificate<1..2^24-1>
+	length := len(p.RawTbsCertificate)
+	b.WriteByte(byte(length >> 16))
+	b.WriteByte(byte(length >> 8))
+	b.WriteByte(byte(length))
+
+	if err := binary.Write(&b, binary.BigEndian, p.RawTbsCertificate); err != nil {
+		panic(err)
+	}
+
+	return b.Bytes()
+}
+
+type TimestampedEntry struct {
+	Timestamp    SctTimestamp
+	LogEntryType uint16  // for now, only precert_entry(1) type
+	Precert      Precert // for now, only precert type
+	CtExtensions uint16  // only for RFC 6962, so always "0x0000"
+}
+
+func (t TimestampedEntry) Marshal() []byte {
+	var b bytes.Buffer
+	if err := binary.Write(&b, binary.BigEndian, t.Timestamp); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(&b, binary.BigEndian, t.LogEntryType); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(&b, binary.BigEndian, t.Precert.Marshal()); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(&b, binary.BigEndian, t.CtExtensions); err != nil {
+		panic(err)
+	}
+	return b.Bytes()
+}
+
+type MerkleTreeLeaf struct {
+	Version          uint8 // always 0(v1)
+	MerkleLeafType   uint8 // always 0(timestamped_entry)
+	TimestampedEntry TimestampedEntry
+}
+
+func (d MerkleTreeLeaf) Marshal() []byte {
+	var b bytes.Buffer
+	if err := binary.Write(&b, binary.BigEndian, d.Version); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(&b, binary.BigEndian, d.MerkleLeafType); err != nil {
+		panic(err)
+	}
+	if err := binary.Write(&b, binary.BigEndian, d.TimestampedEntry.Marshal()); err != nil {
+		panic(err)
+	}
+	return b.Bytes()
 }

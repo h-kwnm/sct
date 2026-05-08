@@ -376,3 +376,43 @@ func fetchSth(log *CachedLog) (SignedTreeHead, error) {
 
 	return data, nil
 }
+
+func fetchProofByHash(h string, log *CachedLog) (RFC6962Proof, error) {
+	sth, err := fetchSth(log)
+	if err != nil {
+		return RFC6962Proof{}, err
+	}
+
+	u := strings.TrimSuffix(log.Url, "/")
+	params := url.Values{}
+	params.Set("hash", h)
+	params.Set("tree_size", strconv.FormatUint(sth.TreeSize, 10))
+
+	endpoint := fmt.Sprintf("%s/ct/v1/get-proof-by-hash?%s", u, params.Encode())
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
+	if err != nil {
+		return RFC6962Proof{}, err
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return RFC6962Proof{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return RFC6962Proof{}, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return RFC6962Proof{}, err
+	}
+
+	var p RFC6962Proof
+	if err := json.Unmarshal(body, &p); err != nil {
+		return RFC6962Proof{}, err
+	}
+
+	return p, nil
+}

@@ -14,7 +14,7 @@ func runGetSth(args []string) {
 
 	log, err := logById(*logId, APITypeRFC6962)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load log cache %d: %v\n", *logId, err)
+		fmt.Fprintf(os.Stderr, "failed to load log cache %d of type %s: %v\n", *logId, APITypeRFC6962, err)
 		os.Exit(1)
 	}
 

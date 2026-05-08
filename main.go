@@ -53,6 +53,9 @@ func main() {
 	case "get-sth":
 		runGetSth(args[1:])
 		return
+	case "get-proof-by-hash":
+		runGetProofByHash(args[1:])
+		return
 	case "version":
 		fmt.Println(version)
 		return

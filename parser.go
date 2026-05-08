@@ -13,15 +13,6 @@ import (
 	"time"
 )
 
-const (
-	entryTypeX509    uint16 = 0
-	entryTypePrecert uint16 = 1
-)
-
-const (
-	extensionTypeLeafIndex uint8 = 0
-)
-
 const maxCertSize = 1 << 20 // 1MB
 
 const maxCtExtSize = 1 << 10
@@ -400,7 +391,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				if err := binary.Read(sr, binary.BigEndian, &ts); err != nil {
 					return nil, fmt.Errorf("failed to read timestamp: %w", err)
 				}
-				sct.Timestamp = time.UnixMilli(int64(ts)).UTC()
+				sct.Timestamp = SctTimestamp(ts)
 
 				ctExt, err := parseCtExtension(sr)
 				if err != nil {
