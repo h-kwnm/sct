@@ -38,12 +38,6 @@ func runGetProofByHash(args []string) {
 	// url := fs.String("url", "", "URL to fetch server certificate")
 	fs.Parse(args)
 
-	// log, err := logById(*logId, APITypeRFC6962)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "failed to load log cache %d of type %s: %v\n", *logId, APITypeRFC6962, err)
-	// 	os.Exit(1)
-	// }
-
 	if *pemFile == "" {
 		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash --pem <pem_file_path> --iss <ssuer-cert>")
 		os.Exit(1)
@@ -71,21 +65,19 @@ func runGetProofByHash(args []string) {
 		os.Exit(1)
 	}
 
-	os.WriteFile("test.der", leaf.Marshal(), 0644)
-
 	leafBytes := leaf.Marshal()
 	h := sha256.Sum256(append([]byte{0x00}, leafBytes...))
 	b64Hash := base64.StdEncoding.EncodeToString(h[:])
 
-	proof, err := fetchProofByHash(b64Hash, log)
+	result, err := fetchProofByHash(b64Hash, log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logId, err)
 		os.Exit(1)
 	}
 
-	j, err := json.MarshalIndent(proof, "", "  ")
+	j, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to marshal audit proof JSON: %v\n", err)
+		fmt.Fprintf(os.Stderr, "failed to marshal audit proof result JSON: %v\n", err)
 		os.Exit(1)
 	}
 

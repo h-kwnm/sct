@@ -329,8 +329,15 @@ type RFC6962Proof struct {
 	AuditPath []string `json:"audit_path"`
 }
 
+type RFC6962ProofResult struct {
+	FetchedAt time.Time    `json:"fetched_at"`
+	Log       *CachedLog   `json:"log"`
+	TreeSize  uint64       `json:"tree_size"`
+	Hash      string       `json:"hash"`
+	Proof     RFC6962Proof `json:"audit_proof"`
+}
+
 type TbsCertificate struct {
-	Raw                  asn1.RawContent
 	Version              asn1.RawValue `asn1:"optional,explicit,tag:0"`
 	SerialNumber         asn1.RawValue
 	SignatureAlgorithm   asn1.RawValue
