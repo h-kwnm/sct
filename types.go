@@ -403,15 +403,15 @@ type MerkleTreeLeaf struct {
 	TimestampedEntry TimestampedEntry
 }
 
-func (d MerkleTreeLeaf) Marshal() []byte {
+func (l MerkleTreeLeaf) Marshal() []byte {
 	var b bytes.Buffer
-	if err := binary.Write(&b, binary.BigEndian, d.Version); err != nil {
+	if err := binary.Write(&b, binary.BigEndian, l.Version); err != nil {
 		panic(err)
 	}
-	if err := binary.Write(&b, binary.BigEndian, d.MerkleLeafType); err != nil {
+	if err := binary.Write(&b, binary.BigEndian, l.MerkleLeafType); err != nil {
 		panic(err)
 	}
-	if err := binary.Write(&b, binary.BigEndian, d.TimestampedEntry.Marshal()); err != nil {
+	if err := binary.Write(&b, binary.BigEndian, l.TimestampedEntry.Marshal()); err != nil {
 		panic(err)
 	}
 	return b.Bytes()
