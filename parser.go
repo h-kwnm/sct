@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -296,6 +297,50 @@ func parseDataTile(data []byte) ([]DataEntry, error) {
 	}
 
 	return entries, nil
+}
+
+func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
+	var signedNotes []SignedNote
+	for _, line := range lines {
+		if !strings.HasPrefix(line, "— ") {
+			continue
+		}
+		trimmed := strings.TrimPrefix(line, "— ")
+		tuple := strings.SplitN(trimmed, " ", 2)
+		if len(tuple) == 2 {
+			var sn SignedNote
+			if tuple[0] == origin {
+				sn.KeyName = origin
+				raw, err := base64.StdEncoding.DecodeString(tuple[1])
+				if err != nil {
+					return nil, err
+				}
+				r := bytes.NewReader(raw)
+				var keyID uint32
+				if err := binary.Read(r, binary.BigEndian, &keyID); err != nil {
+					return nil, err
+				}
+				rawSig, err := io.ReadAll(r)
+				if err != nil {
+					return nil, err
+				}
+				sig := base64.StdEncoding.EncodeToString(rawSig)
+				sn.SignedNoteSignature = SignedNoteSignature{
+					KeyID:     fmt.Sprintf("%x", keyID),
+					Signature: sig,
+				}
+			} else {
+				sn.KeyName = tuple[0]
+				sn.SignedNoteSignature = SignedNoteSignature{
+					Unknown: tuple[1],
+				}
+			}
+
+			signedNotes = append(signedNotes, sn)
+		}
+	}
+
+	return signedNotes, nil
 }
 
 // x.509 cert sct extensions
