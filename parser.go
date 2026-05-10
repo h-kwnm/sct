@@ -84,7 +84,7 @@ func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
 	if extLen > maxCtExtSize {
 		return CtExtension{}, fmt.Errorf("too long ct extension length: %d", extLen)
 	}
-	ctExt.ExtensionLength = extLen
+	ctExt.Length = extLen
 
 	slog.Debug("parseCtExtension", "headerLen", 2, "extLen", extLen)
 
@@ -99,7 +99,7 @@ func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
 		if err := binary.Read(extReader, binary.BigEndian, &extType); err != nil {
 			return CtExtension{}, fmt.Errorf("reading ct extension type: %w", err)
 		}
-		ctExt.ExtensionType = extType
+		ctExt.Type = extType
 
 		switch extType {
 		case extensionTypeLeafIndex:
@@ -115,7 +115,7 @@ func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
 			if err != nil {
 				return CtExtension{}, fmt.Errorf("reading leaf index in ct extension type %d: %w", extensionTypeLeafIndex, err)
 			}
-			ctExt.ExtensionValue = leafIndex
+			ctExt.Value = leafIndex
 
 			slog.Debug("parseCtExtension", "extType", extType, "leafIndex", leafIndex)
 		default:
@@ -171,11 +171,11 @@ func parseTimestampedEntry(r *bytes.Reader, de *DataEntry) ([]byte, uint16, erro
 	if err != nil {
 		return nil, 0, fmt.Errorf("parsing ct extensions: %w", err)
 	}
-	if ext.ExtensionLength == 0 {
+	if ext.Length == 0 {
 		// SCT CtExtensions MUST include "leaf_index" type ct extension.
 		return nil, 0, fmt.Errorf("invalid empty ct extension(it must include leaf_index extension)")
 	} else {
-		de.LeafIndex = ext.ExtensionValue
+		de.LeafIndex = ext.Value
 	}
 	return certDer, entryType, nil
 }
@@ -397,7 +397,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse ct extension: %w", err)
 				}
-				if ctExt.ExtensionLength != 0 {
+				if ctExt.Length != 0 {
 					sct.CtExtensions = append(sct.CtExtensions, ctExt)
 				}
 

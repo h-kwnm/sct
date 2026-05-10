@@ -173,8 +173,8 @@ func TestParseCertSCTRealCert(t *testing.T) {
 	if len(sct1.CtExtensions) != 1 {
 		t.Fatalf("SCT[1]: got %d ct_extensions, want 1", len(sct1.CtExtensions))
 	}
-	if sct1.CtExtensions[0].ExtensionValue != 187809721 {
-		t.Errorf("SCT[1] leaf_index = %d, want 187809721", sct1.CtExtensions[0].ExtensionValue)
+	if sct1.CtExtensions[0].Value != 187809721 {
+		t.Errorf("SCT[1] leaf_index = %d, want 187809721", sct1.CtExtensions[0].Value)
 	}
 }
 
@@ -217,8 +217,8 @@ func TestParseCertSCTLeafIndex(t *testing.T) {
 	if len(sct.CtExtensions) != 1 {
 		t.Fatalf("got %d ct_extensions, want 1", len(sct.CtExtensions))
 	}
-	if sct.CtExtensions[0].ExtensionValue != wantLeafIndex {
-		t.Errorf("leaf_index = %d, want %d", sct.CtExtensions[0].ExtensionValue, wantLeafIndex)
+	if sct.CtExtensions[0].Value != wantLeafIndex {
+		t.Errorf("leaf_index = %d, want %d", sct.CtExtensions[0].Value, wantLeafIndex)
 	}
 }
 
@@ -279,7 +279,7 @@ func TestParseCertSCTMultipleSCTs(t *testing.T) {
 	if len(scts[0].CtExtensions) != 0 {
 		t.Errorf("SCT[0]: got %d ct_extensions, want 0", len(scts[0].CtExtensions))
 	}
-	if len(scts[1].CtExtensions) != 1 || scts[1].CtExtensions[0].ExtensionValue != 99 {
+	if len(scts[1].CtExtensions) != 1 || scts[1].CtExtensions[0].Value != 99 {
 		t.Errorf("SCT[1]: unexpected ct_extensions %v", scts[1].CtExtensions)
 	}
 }

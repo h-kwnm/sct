@@ -244,9 +244,9 @@ type DataTile struct {
 // uint40 LeafIndex;
 
 type CtExtension struct {
-	ExtensionType   uint8  `json:"extension_type"`
-	ExtensionLength uint16 `json:"extension_length"`
-	ExtensionValue  uint64 `json:"extension_value"`
+	Type   uint8  `json:"extension_type"`
+	Length uint16 `json:"extension_length"`
+	Value  uint64 `json:"extension_value"`
 }
 
 type SctTimestamp uint64
