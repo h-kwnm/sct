@@ -71,23 +71,27 @@ func runGetProofByHash(args []string) {
 		}
 	}
 
-	leaf, log, err := buildMerkleTreeLeaf(cert, issCert)
+	leaves, logs, err := buildMerkleTreeLeaves(cert, issCert)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to build merkle tree leaf: %v\n", err)
 		os.Exit(1)
 	}
 
-	leafBytes := leaf.Marshal()
-	h := sha256.Sum256(append([]byte{0x00}, leafBytes...))
-	b64Hash := base64.StdEncoding.EncodeToString(h[:])
+	results := make([]RFC6962ProofResult, len(leaves))
+	for i, leaf := range leaves {
+		leafBytes := leaf.Marshal()
+		h := sha256.Sum256(append([]byte{0x00}, leafBytes...))
+		b64Hash := base64.StdEncoding.EncodeToString(h[:])
 
-	result, err := fetchProofByHash(b64Hash, log)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logId, err)
-		os.Exit(1)
+		results[i], err = fetchProofByHash(b64Hash, logs[i])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logId, err)
+			os.Exit(1)
+		}
+
 	}
 
-	j, err := json.MarshalIndent(result, "", "  ")
+	j, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to marshal audit proof result JSON: %v\n", err)
 		os.Exit(1)
@@ -116,13 +120,13 @@ func trimSctExtension(rawTbs []byte) ([]byte, error) {
 	return asn1.Marshal(tbs)
 }
 
-func buildMerkleTreeLeaf(cert, issCert *x509.Certificate) (MerkleTreeLeaf, *CachedLog, error) {
+func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, []*CachedLog, error) {
 	// build Precert
 	// - isk (32 bytes)
 	// - tbs
 	tbs, err := trimSctExtension(cert.RawTBSCertificate)
 	if err != nil {
-		return MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TbsCertificate: %w", err)
+		return []MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TbsCertificate: %w", err)
 	}
 	isk := sha256.Sum256(issCert.RawSubjectPublicKeyInfo)
 	precert := Precert{RawTbsCertificate: tbs, IssuerKeyHash: isk}
@@ -134,37 +138,42 @@ func buildMerkleTreeLeaf(cert, issCert *x509.Certificate) (MerkleTreeLeaf, *Cach
 	// - CtExtensions -> this is for RFC 6962, so always 0x0000
 	scts, err := parseCertSCT(cert)
 	if err != nil {
-		return MerkleTreeLeaf{}, nil, err
+		return []MerkleTreeLeaf{}, nil, err
 	}
-	var ts SctTimestamp
-	var logId string
+
+	var logIds []string
+	var tsEntries []TimestampedEntry
 	for _, sct := range scts {
 		if sct.CtExtensions == nil {
-			ts = sct.Timestamp // TODO: support for a case that multiple timestamp exist
-			logId = sct.LogId
+			logIds = append(logIds, sct.LogId)
+			tsEntries = append(tsEntries, TimestampedEntry{
+				Timestamp:    sct.Timestamp,
+				LogEntryType: entryTypePrecert,
+				Precert:      precert,
+				CtExtensions: 0x0000,
+			})
 		}
-	}
-	tsEntry := TimestampedEntry{
-		Timestamp:    ts,
-		LogEntryType: entryTypePrecert,
-		Precert:      precert,
-		CtExtensions: 0x0000,
 	}
 
 	// build MekleTreeLeaf
 	// - version (1 byte) -> always 0(v1)
 	// - leaf_type (1 byte) -> always 0(timestamped_entry)
 	// - timestamped_entry
-	leaf := MerkleTreeLeaf{
-		Version:          0,
-		MerkleLeafType:   0,
-		TimestampedEntry: tsEntry,
+	leaves := make([]MerkleTreeLeaf, len(tsEntries))
+	logs := make([]*CachedLog, len(logIds))
+	for i, ts := range tsEntries {
+		leaves[i] = MerkleTreeLeaf{
+			Version:          0,
+			MerkleLeafType:   0,
+			TimestampedEntry: ts,
+		}
+
+		l, err := logByLogId(logIds[i])
+		if err != nil {
+			return []MerkleTreeLeaf{}, nil, err
+		}
+		logs[i] = l
 	}
 
-	l, err := logByLogId(logId)
-	if err != nil {
-		return MerkleTreeLeaf{}, nil, err
-	}
-
-	return leaf, l, nil
+	return leaves, logs, nil
 }
