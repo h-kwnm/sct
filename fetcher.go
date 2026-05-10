@@ -165,7 +165,7 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 
 func formatTileString(index uint64, partialIndex uint64) string {
 	s := ""
-	const k = 1000
+	const k = 1000 // tile path group unit
 	if index < k {
 		s = fmt.Sprintf("%03d", index)
 	} else if index < k*k {
