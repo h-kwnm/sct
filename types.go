@@ -157,7 +157,7 @@ type LogCache struct {
 //
 // opaque CtExtensions<0..2^16-1>; // 2 + b byte
 
-// TimestamedEntry format https://www.rfc-editor.org/rfc/rfc6962#section-3.4
+// TimestampedEntry format https://www.rfc-editor.org/rfc/rfc6962#section-3.4
 // ---
 // struct {
 //   uint64 timestamp; // 8 byte

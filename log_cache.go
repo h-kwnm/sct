@@ -163,7 +163,7 @@ func logByLogID(logID string) (*CachedLog, error) {
 		return nil, fmt.Errorf("no log cache found, run 'sct logs' first")
 	}
 	for i := range cache.Logs {
-		// note: this is under assumptioin that the same key(log id) is not shared among multiple logs
+		// note: this is under assumption that the same key(log id) is not shared among multiple logs
 		if cache.Logs[i].LogID == logID {
 			return &cache.Logs[i], nil
 		}

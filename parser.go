@@ -119,7 +119,7 @@ func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
 			slog.Debug("parseCtExtension", "extType", extType, "leafIndex", leafIndex)
 		default:
 			// just ignore unknown extension for now, as specified in static-ct-api specification.
-			// currently "leaf_index" is the only extenstion type.
+			// currently "leaf_index" is the only extension type.
 			// return CtExtension{}, fmt.Errorf("unknown ct extension type: %d", extType)
 			var unknownTypeLen uint16
 			if err := binary.Read(extReader, binary.BigEndian, &unknownTypeLen); err != nil {
@@ -377,7 +377,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				if err := binary.Read(sr, binary.BigEndian, logID[:]); err != nil {
 					return nil, fmt.Errorf("failed to read log id: %w", err)
 				}
-				// allign the same format with "log_id" field in log_list.json
+				// align the same format with "log_id" field in log_list.json
 				sct.LogID = base64.StdEncoding.EncodeToString(logID[:])
 				log, err := logByLogID(sct.LogID)
 				if err != nil {
