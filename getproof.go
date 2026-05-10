@@ -33,30 +33,42 @@ func readCertFile(fname string) (*x509.Certificate, error) {
 func runGetProofByHash(args []string) {
 	fs := flag.NewFlagSet("get-proof-by-hash", flag.ExitOnError)
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
-	issuer := fs.String("iss", "", "PEM-formatted issuer certificate")
+	issFile := fs.String("iss", "", "PEM-formatted issuer certificate")
 	logId := fs.Int("?log", 0, "log id (see 'sct logs --type rfc6962')")
-	// url := fs.String("url", "", "URL to fetch server certificate")
+	url := fs.String("url", "", "URL to fetch server certificate")
 	fs.Parse(args)
 
-	if *pemFile == "" {
-		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash --pem <pem_file_path> --iss <ssuer-cert>")
-		os.Exit(1)
-	}
-	if *issuer == "" {
-		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash --pem <pem_file_path> --iss <ssuer-cert>")
+	if *url == "" && (*pemFile == "" || *issFile == "") {
+		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash [--pem <pem_file_path> --iss <ssuer-cert>|--url <url>]")
 		os.Exit(1)
 	}
 
-	cert, err := readCertFile(*pemFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse input certificate: %v\n", err)
-		os.Exit(1)
-	}
+	var cert, issCert *x509.Certificate
+	var err error
+	if *url != "" {
+		chain, err := fetchServerCertificate(*url)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to fetch certificates from %s: %v\n", *url, err)
+			os.Exit(1)
+		}
+		if len(chain) < 2 {
+			fmt.Fprintf(os.Stderr, "endpoint %s did not send issuer certificate(len=%d):%v\n", *url, len(chain), err)
+			os.Exit(1)
+		}
+		cert = chain[0]
+		issCert = chain[1]
+	} else {
+		cert, err = readCertFile(*pemFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to parse input certificate: %v\n", err)
+			os.Exit(1)
+		}
 
-	issCert, err := readCertFile(*issuer)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse input certificate: %v\n", err)
-		os.Exit(1)
+		issCert, err = readCertFile(*issFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to parse input certificate: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	leaf, log, err := buildMerkleTreeLeaf(cert, issCert)

@@ -40,11 +40,12 @@ func runGetSct(args []string) {
 			os.Exit(1)
 		}
 	} else { // --url <url>
-		cert, err = fetchServerCertificate(*url)
+		chain, err := fetchServerCertificate(*url)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to fetch server certificate from %s: %v\n", *url, err)
 			os.Exit(1)
 		}
+		cert = chain[0]
 	}
 
 	sct, err := parseCertSCT(cert)

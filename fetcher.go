@@ -322,7 +322,7 @@ func fetchTiles(accesses map[string][]IndexRange, log *CachedLog) (map[string]Ti
 	return tiles, nil
 }
 
-func fetchServerCertificate(endpoint string) (*x509.Certificate, error) {
+func fetchServerCertificate(endpoint string) ([]*x509.Certificate, error) {
 	u, err := url.Parse(endpoint)
 	var address string
 	if u.Port() == "" {
@@ -340,7 +340,7 @@ func fetchServerCertificate(endpoint string) (*x509.Certificate, error) {
 
 	certs := conn.ConnectionState().PeerCertificates
 
-	return certs[0], nil
+	return certs, nil
 }
 
 func fetchSth(log *CachedLog) (SignedTreeHead, error) {
