@@ -324,6 +324,9 @@ func fetchTiles(accesses map[string][]IndexRange, log *CachedLog) (map[string]Ti
 
 func fetchServerCertificate(endpoint string) ([]*x509.Certificate, error) {
 	u, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid endpoint URL %s: %w", endpoint, err)
+	}
 	var address string
 	if u.Port() == "" {
 		address = fmt.Sprintf("%s:443", u.Hostname())
