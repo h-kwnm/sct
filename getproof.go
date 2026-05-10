@@ -102,8 +102,6 @@ func runGetProofByHash(args []string) {
 }
 
 func trimSctExtension(rawTbs []byte) ([]byte, error) {
-	sctListOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
-
 	var tbs TbsCertificate
 	if _, err := asn1.Unmarshal(rawTbs, &tbs); err != nil {
 		return nil, err
@@ -111,7 +109,7 @@ func trimSctExtension(rawTbs []byte) ([]byte, error) {
 
 	filtered := tbs.Extensions[:0]
 	for _, ext := range tbs.Extensions {
-		if !ext.Id.Equal(sctListOID) {
+		if !ext.Id.Equal(oidSCTList) {
 			filtered = append(filtered, ext)
 		}
 	}
