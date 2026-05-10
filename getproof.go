@@ -34,7 +34,7 @@ func runGetProofByHash(args []string) {
 	fs := flag.NewFlagSet("get-proof-by-hash", flag.ExitOnError)
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
 	issFile := fs.String("iss", "", "PEM-formatted issuer certificate")
-	logId := fs.Int("?log", 0, "log id (see 'sct logs --type rfc6962')")
+	logID := fs.Int("?log", 0, "log id (see 'sct logs --type rfc6962')")
 	url := fs.String("url", "", "URL to fetch server certificate")
 	fs.Parse(args)
 
@@ -85,7 +85,7 @@ func runGetProofByHash(args []string) {
 
 		results[i], err = fetchProofByHash(b64Hash, logs[i])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logId, err)
+			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logID, err)
 			os.Exit(1)
 		}
 
@@ -141,11 +141,11 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 		return []MerkleTreeLeaf{}, nil, err
 	}
 
-	var logIds []string
+	var logIDs []string
 	var tsEntries []TimestampedEntry
 	for _, sct := range scts {
 		if sct.CtExtensions == nil {
-			logIds = append(logIds, sct.LogId)
+			logIDs = append(logIDs, sct.LogID)
 			tsEntries = append(tsEntries, TimestampedEntry{
 				Timestamp:    sct.Timestamp,
 				LogEntryType: entryTypePrecert,
@@ -160,7 +160,7 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 	// - leaf_type (1 byte) -> always 0(timestamped_entry)
 	// - timestamped_entry
 	leaves := make([]MerkleTreeLeaf, len(tsEntries))
-	logs := make([]*CachedLog, len(logIds))
+	logs := make([]*CachedLog, len(logIDs))
 	for i, ts := range tsEntries {
 		leaves[i] = MerkleTreeLeaf{
 			Version:          0,
@@ -168,7 +168,7 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 			TimestampedEntry: ts,
 		}
 
-		l, err := logByLogId(logIds[i])
+		l, err := logByLogID(logIDs[i])
 		if err != nil {
 			return []MerkleTreeLeaf{}, nil, err
 		}

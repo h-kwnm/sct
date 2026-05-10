@@ -12,17 +12,17 @@ import (
 
 func runData(args []string) {
 	fs := flag.NewFlagSet("data", flag.ExitOnError)
-	logId := fs.Int("log", 0, "log id (see 'sct logs')")
+	logID := fs.Int("log", 0, "log id (see 'sct logs')")
 	index := fs.Uint64("index", 0, "leaf index")
 	outpath := fs.String("out", "", "data tile entries output location")
 	fs.Parse(args)
 
-	if *logId == 0 {
+	if *logID == 0 {
 		fmt.Fprintln(os.Stderr, "usage: sct data --log <id> --index <n>")
 		os.Exit(1)
 	}
 
-	log, err := logById(*logId, APITypeStaticCT)
+	log, err := logByID(*logID, APITypeStaticCT)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

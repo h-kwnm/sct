@@ -374,17 +374,17 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				}
 				sct.Version = sctVersion
 
-				var logId [32]byte
-				if err := binary.Read(sr, binary.BigEndian, logId[:]); err != nil {
+				var logID [32]byte
+				if err := binary.Read(sr, binary.BigEndian, logID[:]); err != nil {
 					return nil, fmt.Errorf("failed to read log id: %w", err)
 				}
 				// allign the same format with "log_id" field in log_list.json
-				sct.LogId = base64.StdEncoding.EncodeToString(logId[:])
-				log, err := logByLogId(sct.LogId)
+				sct.LogID = base64.StdEncoding.EncodeToString(logID[:])
+				log, err := logByLogID(sct.LogID)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "log not found for log id %s: %v\n", sct.LogId, err)
+					fmt.Fprintf(os.Stderr, "log not found for log id %s: %v\n", sct.LogID, err)
 				} else {
-					sct.LogIdDescription = log.Description
+					sct.LogIDDescription = log.Description
 				}
 
 				var ts uint64

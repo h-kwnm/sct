@@ -12,7 +12,7 @@ import (
 // used to verify key ID derivation against a known-good value.
 var sycamore2026h1 = TiledLog{
 	Description:   "Let's Encrypt 'Sycamore2026h1'",
-	LogId:         "pcl4kl1XRheChw3YiWYLXFVki30AQPLsB2hR0YhpGfc=",
+	LogID:         "pcl4kl1XRheChw3YiWYLXFVki30AQPLsB2hR0YhpGfc=",
 	Key:           "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfEEe0JZknA91/c6eNl1aexgeKzuGQUMvRCXPXg9L227O5I4Pi++Abcpq6qxlVUKPYafAJelAnMfGzv3lHCc8gA==",
 	SubmissionUrl: "https://log.sycamore.ct.letsencrypt.org/2026h1/",
 	MonitoringUrl: "https://mon.sycamore.ct.letsencrypt.org/2026h1/",
@@ -53,8 +53,8 @@ func TestBuildLogCacheIdAssignment(t *testing.T) {
 		t.Fatalf("got %d logs, want 3", len(cache.Logs))
 	}
 	for i, l := range cache.Logs {
-		if l.Id != i+1 {
-			t.Errorf("logs[%d].Id = %d, want %d", i, l.Id, i+1)
+		if l.ID != i+1 {
+			t.Errorf("logs[%d].Id = %d, want %d", i, l.ID, i+1)
 		}
 	}
 }
@@ -67,7 +67,7 @@ func TestBuildLogCacheKeyID(t *testing.T) {
 	if len(cache.Logs) != 1 {
 		t.Fatalf("got %d logs, want 1", len(cache.Logs))
 	}
-	got := cache.Logs[0].KeyId
+	got := cache.Logs[0].KeyID
 	want := "104b9ebf"
 	if got != want {
 		t.Errorf("KeyId = %q, want %q", got, want)
@@ -95,10 +95,10 @@ func TestSaveLoadLogCacheRoundTrip(t *testing.T) {
 		LogListVersion: "85.48",
 		Logs: []CachedLog{
 			{
-				Id:          1,
+				ID:          1,
 				Operator:    "Let's Encrypt",
 				Description: "Let's Encrypt 'Sycamore2026h1'",
-				KeyId:       "104b9ebf",
+				KeyID:       "104b9ebf",
 				Origin:      "log.sycamore.ct.letsencrypt.org/2026h1",
 				State:       LogStateUsable,
 			},
@@ -131,9 +131,9 @@ func TestSaveLoadLogCacheRoundTrip(t *testing.T) {
 	if len(loaded.Logs) != 1 {
 		t.Fatalf("got %d logs, want 1", len(loaded.Logs))
 	}
-	if loaded.Logs[0].KeyId != original.Logs[0].KeyId {
-		t.Errorf("KeyId = %q, want %q", loaded.Logs[0].KeyId,
-			original.Logs[0].KeyId)
+	if loaded.Logs[0].KeyID != original.Logs[0].KeyID {
+		t.Errorf("KeyId = %q, want %q", loaded.Logs[0].KeyID,
+			original.Logs[0].KeyID)
 	}
 	if loaded.Logs[0].State != LogStateUsable {
 		t.Errorf("State = %q, want %q", loaded.Logs[0].State, LogStateUsable)

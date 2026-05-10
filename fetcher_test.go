@@ -50,8 +50,8 @@ func TestParseSignedNotesOriginSignature(t *testing.T) {
 	if notes[0].KeyName != origin {
 		t.Errorf("KeyName = %q, want %q", notes[0].KeyName, origin)
 	}
-	if notes[0].SignedNoteSignature.KeyId != "104b9ebf" {
-		t.Errorf("KeyId = %q, want %q", notes[0].SignedNoteSignature.KeyId,
+	if notes[0].SignedNoteSignature.KeyID != "104b9ebf" {
+		t.Errorf("KeyID = %q, want %q", notes[0].SignedNoteSignature.KeyID,
 			"104b9ebf")
 	}
 	if notes[0].SignedNoteSignature.Signature == "" {

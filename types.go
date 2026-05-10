@@ -63,7 +63,7 @@ func (s LogState) MarshalJSON() ([]byte, error) {
 
 type Log struct {
 	Description string   `json:"description"`
-	LogId       string   `json:"log_id"`
+	LogID       string   `json:"log_id"`
 	Key         string   `json:"key"`
 	Url         string   `json:"url"`
 	State       LogState `json:"state"`
@@ -71,7 +71,7 @@ type Log struct {
 
 type TiledLog struct {
 	Description   string   `json:"description"`
-	LogId         string   `json:"log_id"`
+	LogID         string   `json:"log_id"`
 	Key           string   `json:"key"`
 	SubmissionUrl string   `json:"submission_url"`
 	MonitoringUrl string   `json:"monitoring_url"`
@@ -105,7 +105,7 @@ type SignedNote struct {
 }
 
 type SignedNoteSignature struct {
-	KeyId     string `json:"key_id,omitempty"`
+	KeyID     string `json:"key_id,omitempty"`
 	Signature string `json:"signature,omitempty"`
 	Unknown   string `json:"unknown,omitempty"`
 }
@@ -120,15 +120,15 @@ const (
 )
 
 type CachedLog struct {
-	Id          int      `json:"id"`
+	ID          int      `json:"id"`
 	Operator    string   `json:"operator"`
 	Description string   `json:"description"`
-	LogId       string   `json:"log_id"`
+	LogID       string   `json:"log_id"`
 	Key         string   `json:"key"`
 	State       LogState `json:"state"`
 	APIType     APIType  `json:"api_type"`
 	// Static CT API
-	KeyId         string `json:"key_id,omitempty"`
+	KeyID         string `json:"key_id,omitempty"`
 	Origin        string `json:"origin,omitempty"`
 	MonitoringUrl string `json:"monitoring_url,omitempty"`
 	SubmissionUrl string `json:"submission_url,omitempty"`
@@ -258,8 +258,8 @@ func (t SctTimestamp) MarshalJSON() ([]byte, error) {
 
 type SCT struct {
 	Version          uint8         `json:"version"`
-	LogId            string        `json:"log_id"`
-	LogIdDescription string        `json:"log_id_description"` // "description" the log in thelog list
+	LogID            string        `json:"log_id"`
+	LogIDDescription string        `json:"log_id_description"` // "description" the log in thelog list
 	Timestamp        SctTimestamp  `json:"timestamp"`
 	CtExtensions     []CtExtension `json:"ct_extensions,omitempty"`
 }

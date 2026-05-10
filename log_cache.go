@@ -72,10 +72,10 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 	for _, operator := range logList.Operators {
 		for _, log := range operator.Logs {
 			cache.Logs = append(cache.Logs, CachedLog{
-				Id:          id,
+				ID:          id,
 				Operator:    operator.Name,
 				Description: log.Description,
-				LogId:       log.LogId,
+				LogID:       log.LogID,
 				Key:         log.Key,
 				Url:         log.Url,
 				State:       log.State,
@@ -103,7 +103,7 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 			// > The key ID MUST be the first four bytes (interpreted in big-endian order) of
 			// > the SHA-256 hash of the following sequence: the key name, a newline character (0x0A),
 			// > the signature type identifier byte 0x05, and the 32-byte RFC 6962 LogID.
-			logIdBytes, err := base64.StdEncoding.DecodeString(tiledLog.LogId)
+			logIDBytes, err := base64.StdEncoding.DecodeString(tiledLog.LogID)
 			if err != nil {
 				return nil, err
 			}
@@ -111,17 +111,17 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 			kbuf.Write([]byte(origin))
 			kbuf.Write([]byte{0x0a})
 			kbuf.Write([]byte{0x05}) // 0x05 - static ct api signature type
-			kbuf.Write(logIdBytes)
+			kbuf.Write(logIDBytes)
 			khash := sha256.Sum256(kbuf.Bytes())
-			keyId := khash[0:4]
+			keyID := khash[0:4]
 
 			cache.Logs = append(cache.Logs, CachedLog{
-				Id:            id,
+				ID:            id,
 				Operator:      operator.Name,
 				Description:   tiledLog.Description,
-				LogId:         tiledLog.LogId,
+				LogID:         tiledLog.LogID,
 				Key:           tiledLog.Key,
-				KeyId:         fmt.Sprintf("%x", keyId),
+				KeyID:         fmt.Sprintf("%x", keyID),
 				Origin:        origin,
 				MonitoringUrl: tiledLog.MonitoringUrl,
 				SubmissionUrl: tiledLog.SubmissionUrl,
@@ -135,7 +135,7 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 	return cache, nil
 }
 
-func logById(id int, apiType APIType) (*CachedLog, error) {
+func logByID(id int, apiType APIType) (*CachedLog, error) {
 	cache, err := loadLogCache()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load log cache: %w", err)
@@ -144,7 +144,7 @@ func logById(id int, apiType APIType) (*CachedLog, error) {
 		return nil, fmt.Errorf("no log cache found, run 'sct logs' first")
 	}
 	for i := range cache.Logs {
-		if cache.Logs[i].Id == id {
+		if cache.Logs[i].ID == id {
 			if cache.Logs[i].APIType != apiType {
 				return nil, fmt.Errorf("unexpected log was specified(invalid API type: expected %s, but the log %d is %s type)", apiType, id, cache.Logs[i].APIType)
 			}
@@ -154,7 +154,7 @@ func logById(id int, apiType APIType) (*CachedLog, error) {
 	return nil, fmt.Errorf("no log with id %d", id)
 }
 
-func logByLogId(logId string) (*CachedLog, error) {
+func logByLogID(logID string) (*CachedLog, error) {
 	cache, err := loadLogCache()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load log cache: %w", err)
@@ -164,9 +164,9 @@ func logByLogId(logId string) (*CachedLog, error) {
 	}
 	for i := range cache.Logs {
 		// note: this is under assumptioin that the same key(log id) is not shared among multiple logs
-		if cache.Logs[i].LogId == logId {
+		if cache.Logs[i].LogID == logID {
 			return &cache.Logs[i], nil
 		}
 	}
-	return nil, fmt.Errorf("no log with log id %s", logId)
+	return nil, fmt.Errorf("no log with log id %s", logID)
 }

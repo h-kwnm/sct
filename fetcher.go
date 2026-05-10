@@ -76,8 +76,8 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 					return nil, err
 				}
 				r := bytes.NewReader(raw)
-				var keyId uint32
-				if err := binary.Read(r, binary.BigEndian, &keyId); err != nil {
+				var keyID uint32
+				if err := binary.Read(r, binary.BigEndian, &keyID); err != nil {
 					return nil, err
 				}
 				rawSig, err := io.ReadAll(r)
@@ -86,7 +86,7 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 				}
 				sig := base64.StdEncoding.EncodeToString(rawSig)
 				sn.SignedNoteSignature = SignedNoteSignature{
-					KeyId:     fmt.Sprintf("%x", keyId),
+					KeyID:     fmt.Sprintf("%x", keyID),
 					Signature: sig,
 				}
 			} else {

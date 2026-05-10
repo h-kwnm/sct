@@ -155,8 +155,8 @@ func TestParseCertSCTRealCert(t *testing.T) {
 
 	// SCT 0: classic RFC 6962 log — no ct_extensions
 	sct0 := scts[0]
-	if sct0.LogId != "yzj3FYl8hKFEX1vB3fvJbvKaWc1HCmkFhbDLFMMUWOc=" {
-		t.Errorf("SCT[0].LogId = %q", sct0.LogId)
+	if sct0.LogID != "yzj3FYl8hKFEX1vB3fvJbvKaWc1HCmkFhbDLFMMUWOc=" {
+		t.Errorf("SCT[0].LogID = %q", sct0.LogID)
 	}
 	if sct0.Timestamp == SctTimestamp(0) {
 		t.Error("SCT[0].Timestamp is zero")
@@ -167,8 +167,8 @@ func TestParseCertSCTRealCert(t *testing.T) {
 
 	// SCT 1: Static CT API log — carries leaf_index extension
 	sct1 := scts[1]
-	if sct1.LogId != "cX6V88I4im2x44RJPTHhWqliCHYtQgDgBQzQZ7WmYeI=" {
-		t.Errorf("SCT[1].LogId = %q", sct1.LogId)
+	if sct1.LogID != "cX6V88I4im2x44RJPTHhWqliCHYtQgDgBQzQZ7WmYeI=" {
+		t.Errorf("SCT[1].LogID = %q", sct1.LogID)
 	}
 	if len(sct1.CtExtensions) != 1 {
 		t.Fatalf("SCT[1]: got %d ct_extensions, want 1", len(sct1.CtExtensions))

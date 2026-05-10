@@ -9,16 +9,16 @@ import (
 
 func runAudit(args []string) {
 	fs := flag.NewFlagSet("audit", flag.ExitOnError)
-	logId := fs.Int("log", 0, "log id")
+	logID := fs.Int("log", 0, "log id")
 	index := fs.Uint64("index", 0, "leaf index")
 	fs.Parse(args)
 
-	if *logId == 0 {
+	if *logID == 0 {
 		fmt.Fprintln(os.Stderr, "usage: sct audit --log <id> --index <n>")
 		os.Exit(1)
 	}
 
-	log, err := logById(*logId, APITypeStaticCT)
+	log, err := logByID(*logID, APITypeStaticCT)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

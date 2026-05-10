@@ -9,12 +9,12 @@ import (
 
 func runGetSth(args []string) {
 	fs := flag.NewFlagSet("get-sth", flag.ExitOnError)
-	logId := fs.Int("log", 0, "log id (see 'sct logs --type rfc6962')")
+	logID := fs.Int("log", 0, "log id (see 'sct logs --type rfc6962')")
 	fs.Parse(args)
 
-	log, err := logById(*logId, APITypeRFC6962)
+	log, err := logByID(*logID, APITypeRFC6962)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load log cache %d of type %s: %v\n", *logId, APITypeRFC6962, err)
+		fmt.Fprintf(os.Stderr, "failed to load log cache %d of type %s: %v\n", *logID, APITypeRFC6962, err)
 		os.Exit(1)
 	}
 
