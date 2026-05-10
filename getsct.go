@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"flag"
 	"fmt"
 	"os"
@@ -23,18 +22,7 @@ func runGetSct(args []string) {
 	var cert *x509.Certificate
 	var err error
 	if *pemFile != "" {
-		pemData, err := os.ReadFile(*pemFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to open pem file: %v\n", err)
-			os.Exit(1)
-		}
-		block, _ := pem.Decode(pemData)
-		if block == nil {
-			fmt.Fprintf(os.Stderr, "failed to decode pem file: %v\n", *pemFile)
-			os.Exit(1)
-		}
-
-		cert, err = x509.ParseCertificate(block.Bytes)
+		cert, err = readCertFile(*pemFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to parse input certificate: %v\n", err)
 			os.Exit(1)

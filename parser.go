@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
@@ -345,6 +346,23 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 
 // x.509 cert sct extensions
 
+func trimSctExtension(rawTbs []byte) ([]byte, error) {
+	var tbs TbsCertificate
+	if _, err := asn1.Unmarshal(rawTbs, &tbs); err != nil {
+		return nil, err
+	}
+
+	filtered := tbs.Extensions[:0]
+	for _, ext := range tbs.Extensions {
+		if !ext.Id.Equal(oidSCTList) {
+			filtered = append(filtered, ext)
+		}
+	}
+	tbs.Extensions = filtered
+
+	return asn1.Marshal(tbs)
+}
+
 var oidSCTList = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
 
 func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
@@ -468,4 +486,62 @@ func parseTile(r io.Reader) (Tile, error) {
 	}
 
 	return tile, nil
+}
+
+func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, []*CachedLog, error) {
+	// build Precert
+	// - isk (32 bytes)
+	// - tbs
+	tbs, err := trimSctExtension(cert.RawTBSCertificate)
+	if err != nil {
+		return []MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TbsCertificate: %w", err)
+	}
+	isk := sha256.Sum256(issCert.RawSubjectPublicKeyInfo)
+	precert := Precert{RawTbsCertificate: tbs, IssuerKeyHash: isk}
+
+	// build TimestampedEntry
+	// - timestamp (8 bytes)
+	// - entry_type (2 bytes) -> always 0(timestamped_entry)
+	// - Precert -> for now, ignore "x509_entry" pattern
+	// - CtExtensions -> this is for RFC 6962, so always 0x0000
+	scts, err := parseCertSCT(cert)
+	if err != nil {
+		return []MerkleTreeLeaf{}, nil, err
+	}
+
+	var logIDs []string
+	var tsEntries []TimestampedEntry
+	for _, sct := range scts {
+		if sct.CtExtensions == nil {
+			logIDs = append(logIDs, sct.LogID)
+			tsEntries = append(tsEntries, TimestampedEntry{
+				Timestamp:    sct.Timestamp,
+				LogEntryType: entryTypePrecert,
+				Precert:      precert,
+				CtExtensions: 0x0000,
+			})
+		}
+	}
+
+	// build MekleTreeLeaf
+	// - version (1 byte) -> always 0(v1)
+	// - leaf_type (1 byte) -> always 0(timestamped_entry)
+	// - timestamped_entry
+	leaves := make([]MerkleTreeLeaf, len(tsEntries))
+	logs := make([]*CachedLog, len(logIDs))
+	for i, ts := range tsEntries {
+		leaves[i] = MerkleTreeLeaf{
+			Version:          0,
+			MerkleLeafType:   0,
+			TimestampedEntry: ts,
+		}
+
+		l, err := logByLogID(logIDs[i])
+		if err != nil {
+			return []MerkleTreeLeaf{}, nil, err
+		}
+		logs[i] = l
+	}
+
+	return leaves, logs, nil
 }
