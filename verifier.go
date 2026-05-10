@@ -45,25 +45,28 @@ func getAuditPath(leafIndex, treeSize uint64) AuditPath {
 	}
 }
 
-func buildTileIndex(tileIndex uint64, level int, treeSize uint64) string {
+func buildTileIndex(tileIndex uint64, level int, treeSize uint64) (string, error) {
 	maxTileIndex := (treeSize - 1) / (tileWidth << (tileBitWidth * level))
 	var partialIndex uint64 = 0
 	if tileIndex == maxTileIndex {
 		partialIndex = (treeSize >> uint(tileBitWidth*level)) % tileWidth
 	}
 
-	indexStr := formatTileString(tileIndex, partialIndex)
-	if indexStr == "" {
-		return ""
+	indexStr, err := formatTileString(tileIndex, partialIndex)
+	if err != nil {
+		return "", err
 	}
 
-	return fmt.Sprintf("tile/%d/%s", level, indexStr)
+	return fmt.Sprintf("tile/%d/%s", level, indexStr), nil
 }
 
 func collectNodeTileAccesses(start, end, n uint64, accesses map[string][]IndexRange) {
 	size := end - start
 	if size == 1 {
-		p := buildTileIndex(start/tileWidth, 0, n)
+		p, err := buildTileIndex(start/tileWidth, 0, n)
+		if err != nil {
+			panic(err)
+		}
 		accesses[p] = append(accesses[p], IndexRange{Offset: int(start % tileWidth), Count: 1})
 		return
 	}
@@ -72,7 +75,10 @@ func collectNodeTileAccesses(start, end, n uint64, accesses map[string][]IndexRa
 		level := h / tileBitWidth
 		nodeIndex := start >> (tileBitWidth * level)
 		tileIndex := nodeIndex / tileWidth
-		p := buildTileIndex(tileIndex, level, n)
+		p, err := buildTileIndex(tileIndex, level, n)
+		if err != nil {
+			panic(err)
+		}
 		count := 1 << (h % tileBitWidth)
 		offset := int(nodeIndex % tileWidth)
 		accesses[p] = append(accesses[p], IndexRange{Offset: offset, Count: count})
@@ -107,7 +113,10 @@ func computeNodeHash(start, end, n uint64, tiles map[string]Tile) [32]byte {
 	size := end - start
 	if size == 1 {
 		tileIndex := start / tileWidth
-		p := buildTileIndex(tileIndex, 0, n)
+		p, err := buildTileIndex(tileIndex, 0, n)
+		if err != nil {
+			panic(err)
+		}
 		return tiles[p].Hashes[start%tileWidth]
 	}
 	h := bits.Len64(size - 1)
@@ -115,7 +124,10 @@ func computeNodeHash(start, end, n uint64, tiles map[string]Tile) [32]byte {
 		level := h / tileBitWidth
 		nodeIndex := start >> (tileBitWidth * level)
 		tileIndex := nodeIndex / tileWidth
-		p := buildTileIndex(tileIndex, level, n)
+		p, err := buildTileIndex(tileIndex, level, n)
+		if err != nil {
+			panic(err)
+		}
 		count := 1 << (h % tileBitWidth)
 		offset := int(nodeIndex % tileWidth)
 		return computeMth(tiles[p].Hashes[offset : offset+count])

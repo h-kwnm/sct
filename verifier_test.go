@@ -76,7 +76,10 @@ func TestBuildTileIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildTileIndex(tt.tileIndex, tt.level, tt.treeSize)
+			got, err := buildTileIndex(tt.tileIndex, tt.level, tt.treeSize)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if got != tt.want {
 				t.Errorf("buildTileIndex(%d, %d, %d) = %q, want %q",
 					tt.tileIndex, tt.level, tt.treeSize, got, tt.want)
@@ -118,8 +121,9 @@ func testCheckpoint(leaves [][32]byte) Checkpoint {
 
 // testTiles builds the tiles map for a single-tile tree (n ≤ 256).
 func testTiles(leaves [][32]byte, n uint64) map[string]Tile {
+	index, _ := buildTileIndex(0, 0, n)
 	return map[string]Tile{
-		buildTileIndex(0, 0, n): {Hashes: leaves},
+		index: {Hashes: leaves},
 	}
 }
 
@@ -187,10 +191,13 @@ func TestVerifyInclusion(t *testing.T) {
 	t.Run("cross-tile n=257 m=256", func(t *testing.T) {
 		leaves := testLeaves(257)
 		const n = uint64(257)
+		index1, _ := buildTileIndex(0, 0, n)
+		index2, _ := buildTileIndex(1, 0, n)
+		index3, _ := buildTileIndex(0, 1, n)
 		tiles := map[string]Tile{
-			buildTileIndex(0, 0, n): {Hashes: leaves[0:256]},
-			buildTileIndex(1, 0, n): {Hashes: leaves[256:257]},
-			buildTileIndex(0, 1, n): {Hashes: [][32]byte{computeMth(leaves[0:256])}},
+			index1: {Hashes: leaves[0:256]},
+			index2: {Hashes: leaves[256:257]},
+			index3: {Hashes: [][32]byte{computeMth(leaves[0:256])}},
 		}
 		if !verify(t, 256, leaves, tiles) {
 			t.Error("want true")

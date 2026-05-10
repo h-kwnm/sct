@@ -163,7 +163,7 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 	}, nil
 }
 
-func formatTileString(index uint64, partialIndex uint64) string {
+func formatTileString(index uint64, partialIndex uint64) (string, error) {
 	s := ""
 	const k = 1000 // tile path group unit
 	if index < k {
@@ -175,17 +175,17 @@ func formatTileString(index uint64, partialIndex uint64) string {
 	} else if index < k*k*k*k {
 		s = fmt.Sprintf("x%03d/x%03d/x%03d/%03d", index/(k*k*k), (index/(k*k))%k, (index/k)%k, index%k)
 	} else {
-		return ""
+		return "", fmt.Errorf("invalid index %d", index)
 	}
 
 	if partialIndex != 0 {
 		s += ".p/" + strconv.FormatUint(partialIndex, 10)
 	}
 
-	return s
+	return s, nil
 }
 
-func buildIndex(leafIndex uint64, treeSize uint64) string {
+func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 	tileIndex := leafIndex / tileWidth
 	maxTileIndex := (treeSize - 1) / tileWidth
 	var partialIndex uint64 = 0
@@ -193,17 +193,20 @@ func buildIndex(leafIndex uint64, treeSize uint64) string {
 		partialIndex = treeSize % tileWidth
 	}
 	if tileIndex > maxTileIndex {
-		return ""
+		return "", fmt.Errorf("invalid index(tile index %d is greater than tree size %d)", tileIndex, maxTileIndex)
 	}
 
 	slog.Debug("buildIndex", "leaf_index", leafIndex, "tile_index", tileIndex, "partial_index", partialIndex)
 
 	// <monitoring prefix>/tile/data/<N>[.p/<W>]
 	// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#log-entries
-	indexPath := formatTileString(tileIndex, partialIndex)
+	indexPath, err := formatTileString(tileIndex, partialIndex)
+	if err != nil {
+		return "", err
+	}
 	slog.Debug("buildIndex", "tile_index_path", indexPath)
 
-	return indexPath
+	return indexPath, nil
 }
 
 func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
@@ -211,7 +214,10 @@ func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch checkpoint: %w", err)
 	}
-	tileIndexPath := buildIndex(leafIndex, cp.TreeSize)
+	tileIndexPath, err := buildIndex(leafIndex, cp.TreeSize)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to build index path: %w", err)
+	}
 	if tileIndexPath == "" {
 		return nil, "", fmt.Errorf("failed to determine index path: leafIndex=%d, treeSize=%d", leafIndex, cp.TreeSize)
 	}
