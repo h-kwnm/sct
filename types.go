@@ -268,7 +268,7 @@ type SCT struct {
 
 // --- Merkle tree ---
 
-// inclustion proof verification
+// inclusion proof verification
 // https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#merkle-tree
 // <monitoring prefix>/tile/<L>/<N>[.p/<W>]
 type HashRange struct {
