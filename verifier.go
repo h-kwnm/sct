@@ -13,15 +13,17 @@ import (
 const tileBitWidth = 8              // 8
 const tileWidth = 1 << tileBitWidth // 256
 
-func getAuditPath(m uint64, n uint64) AuditPath {
-
-	if m >= n || n == 0 {
+func getAuditPath(leafIndex, treeSize uint64) AuditPath {
+	if leafIndex >= treeSize || treeSize == 0 {
 		return AuditPath{} // tree size(n) must be greater than leaf index(m)
 	}
 
+	m := leafIndex
+	n := treeSize
 	nodes := []HashRange{}
 	var lo uint64 = 0
 	var hi uint64 = n
+
 	for hi-lo > 1 {
 		var k uint64 = 1 << (bits.Len64(hi-lo-1) - 1)
 		mid := lo + k
