@@ -77,7 +77,7 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 				Description: log.Description,
 				LogID:       log.LogID,
 				Key:         log.Key,
-				Url:         log.Url,
+				URL:         log.URL,
 				State:       log.State,
 				APIType:     APITypeRFC6962,
 			})
@@ -88,7 +88,7 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 			// however this is not always true. according to the specification, "origin" SHOULD be schema-less URL
 			// and "origin" SHOULD match key name. they are only recommendation.
 			// https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md#note-text
-			u, err := url.Parse(tiledLog.SubmissionUrl)
+			u, err := url.Parse(tiledLog.SubmissionURL)
 			if err != nil {
 				return nil, err
 			}
@@ -123,8 +123,8 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 				Key:           tiledLog.Key,
 				KeyID:         fmt.Sprintf("%x", keyID),
 				Origin:        origin,
-				MonitoringUrl: tiledLog.MonitoringUrl,
-				SubmissionUrl: tiledLog.SubmissionUrl,
+				MonitoringURL: tiledLog.MonitoringURL,
+				SubmissionURL: tiledLog.SubmissionURL,
 				State:         tiledLog.State,
 				APIType:       APITypeStaticCT,
 			})

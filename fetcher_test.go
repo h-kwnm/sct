@@ -119,7 +119,7 @@ func TestFetchCheckpoint(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cp, err := fetchCheckpoint(&CachedLog{MonitoringUrl: server.URL + "/"})
+	cp, err := fetchCheckpoint(&CachedLog{MonitoringURL: server.URL + "/"})
 	if err != nil {
 		t.Fatalf("fetchCheckpoint() error = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestFetchCheckpointNonOK(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := fetchCheckpoint(&CachedLog{MonitoringUrl: server.URL + "/"})
+	_, err := fetchCheckpoint(&CachedLog{MonitoringURL: server.URL + "/"})
 	if err == nil {
 		t.Fatal("expected error for non-200 response, got nil")
 	}
@@ -160,9 +160,9 @@ func TestFetchLogList(t *testing.T) {
 	defer server.Close()
 
 	// temporarily override the log list URL
-	original := logListUrl
-	logListUrl = server.URL
-	defer func() { logListUrl = original }()
+	original := logListURL
+	logListURL = server.URL
+	defer func() { logListURL = original }()
 
 	ll, err := fetchLogList()
 	if err != nil {

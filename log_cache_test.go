@@ -14,8 +14,8 @@ var sycamore2026h1 = TiledLog{
 	Description:   "Let's Encrypt 'Sycamore2026h1'",
 	LogID:         "pcl4kl1XRheChw3YiWYLXFVki30AQPLsB2hR0YhpGfc=",
 	Key:           "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfEEe0JZknA91/c6eNl1aexgeKzuGQUMvRCXPXg9L227O5I4Pi++Abcpq6qxlVUKPYafAJelAnMfGzv3lHCc8gA==",
-	SubmissionUrl: "https://log.sycamore.ct.letsencrypt.org/2026h1/",
-	MonitoringUrl: "https://mon.sycamore.ct.letsencrypt.org/2026h1/",
+	SubmissionURL: "https://log.sycamore.ct.letsencrypt.org/2026h1/",
+	MonitoringURL: "https://mon.sycamore.ct.letsencrypt.org/2026h1/",
 	State:         LogStateUsable,
 }
 

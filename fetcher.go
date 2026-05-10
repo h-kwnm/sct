@@ -21,7 +21,7 @@ import (
 
 var httpClient = &http.Client{Timeout: 30 * time.Second}
 
-var logListUrl = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
+var logListURL = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 
 // Some log operators could apply request rate limits. for example, Geomys's log has such a limit.
 // Customize User-Agent to include an email address to mitigate such limits when needed.
@@ -34,7 +34,7 @@ var logListUrl = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 const userAgent = "sct/" + version + " (github.com/h-kwnm/sct)"
 
 func fetchLogList() (*LogList, error) {
-	resp, err := httpClient.Get(logListUrl)
+	resp, err := httpClient.Get(logListURL)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failure: %w", err)
 	}
@@ -48,7 +48,7 @@ func fetchLogList() (*LogList, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d, url: %s, body: %s", resp.StatusCode, logListUrl, string(body))
+		return nil, fmt.Errorf("unexpected status code: %d, url: %s, body: %s", resp.StatusCode, logListURL, string(body))
 	}
 
 	var logList LogList
@@ -105,7 +105,7 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 
 func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 	// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#checkpoints
-	checkpointEndpoint := log.MonitoringUrl + "checkpoint"
+	checkpointEndpoint := log.MonitoringURL + "checkpoint"
 
 	slog.Debug("fetchCheckpoint", "url", checkpointEndpoint)
 
@@ -216,7 +216,7 @@ func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("failed to determine index path: leafIndex=%d, treeSize=%d", leafIndex, cp.TreeSize)
 	}
 
-	dataTileEndpoint := fmt.Sprintf("%stile/data/%s", log.MonitoringUrl, tileIndexPath)
+	dataTileEndpoint := fmt.Sprintf("%stile/data/%s", log.MonitoringURL, tileIndexPath)
 	slog.Debug("fetchDataTile", "url", dataTileEndpoint)
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", dataTileEndpoint, nil)
@@ -293,7 +293,7 @@ func fetchTiles(accesses map[string][]IndexRange, log *CachedLog) (map[string]Ti
 
 	i := 0
 	for k := range accesses {
-		url := log.MonitoringUrl + k
+		url := log.MonitoringURL + k
 
 		wg.Add(1)
 		go func(i int, url string) {
@@ -344,7 +344,7 @@ func fetchServerCertificate(endpoint string) ([]*x509.Certificate, error) {
 }
 
 func fetchSth(log *CachedLog) (SignedTreeHead, error) {
-	u := strings.TrimSuffix(log.Url, "/")
+	u := strings.TrimSuffix(log.URL, "/")
 	endpoint := fmt.Sprintf("%s/ct/v1/get-sth", u)
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
@@ -383,7 +383,7 @@ func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
 		return RFC6962ProofResult{}, err
 	}
 
-	u := strings.TrimSuffix(log.Url, "/")
+	u := strings.TrimSuffix(log.URL, "/")
 	params := url.Values{}
 	params.Set("hash", h)
 	params.Set("tree_size", strconv.FormatUint(sth.TreeSize, 10))

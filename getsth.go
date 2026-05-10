@@ -20,7 +20,7 @@ func runGetSth(args []string) {
 
 	sth, err := fetchSth(log)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to fetch signed tree head from %s: %v\n", log.Url, err)
+		fmt.Fprintf(os.Stderr, "failed to fetch signed tree head from %s: %v\n", log.URL, err)
 		os.Exit(1)
 	}
 

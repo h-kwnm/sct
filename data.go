@@ -57,7 +57,7 @@ func runData(args []string) {
 	}
 
 	if *outpath != "" {
-		p, err := saveDataTileEntries(entries, log.MonitoringUrl, tileIndexPath, *outpath)
+		p, err := saveDataTileEntries(entries, log.MonitoringURL, tileIndexPath, *outpath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to save data tile entries to file: %v\n", err)
 			os.Exit(1)
@@ -78,7 +78,7 @@ func buildDataOutputPath(outpath string, url string) (string, error) {
 
 func saveDataTileEntries(entries []DataEntry, url string, tilePath string, outpath string) (string, error) {
 	result := DataTile{
-		MonitoringUrl: url,
+		MonitoringURL: url,
 		TileIndexPath: tilePath,
 		FetchedAt:     time.Now().UTC(),
 		Entries:       entries,

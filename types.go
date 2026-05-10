@@ -65,7 +65,7 @@ type Log struct {
 	Description string   `json:"description"`
 	LogID       string   `json:"log_id"`
 	Key         string   `json:"key"`
-	Url         string   `json:"url"`
+	URL         string   `json:"url"`
 	State       LogState `json:"state"`
 }
 
@@ -73,8 +73,8 @@ type TiledLog struct {
 	Description   string   `json:"description"`
 	LogID         string   `json:"log_id"`
 	Key           string   `json:"key"`
-	SubmissionUrl string   `json:"submission_url"`
-	MonitoringUrl string   `json:"monitoring_url"`
+	SubmissionURL string   `json:"submission_url"`
+	MonitoringURL string   `json:"monitoring_url"`
 	State         LogState `json:"state"`
 }
 
@@ -130,11 +130,11 @@ type CachedLog struct {
 	// Static CT API
 	KeyID         string `json:"key_id,omitempty"`
 	Origin        string `json:"origin,omitempty"`
-	MonitoringUrl string `json:"monitoring_url,omitempty"`
-	SubmissionUrl string `json:"submission_url,omitempty"`
+	MonitoringURL string `json:"monitoring_url,omitempty"`
+	SubmissionURL string `json:"submission_url,omitempty"`
 	// ---
 	// RFC 6962
-	Url string `json:"url,omitempty"`
+	URL string `json:"url,omitempty"`
 	// ---
 }
 
@@ -222,7 +222,7 @@ type DataEntry struct {
 }
 
 type DataTile struct {
-	MonitoringUrl string      `json:"monitoring_url"`
+	MonitoringURL string      `json:"monitoring_url"`
 	TileIndexPath string      `json:"tile_index_path"`
 	FetchedAt     time.Time   `json:"fetched_time"`
 	Entries       []DataEntry `json:"entries"`
