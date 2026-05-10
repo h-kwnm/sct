@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"time"
 )
 
@@ -382,7 +381,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				sct.LogID = base64.StdEncoding.EncodeToString(logID[:])
 				log, err := logByLogID(sct.LogID)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "log not found for log id %s: %v\n", sct.LogID, err)
+					slog.Warn("log not found for log id %s: %v\n", sct.LogID, err)
 				} else {
 					sct.LogIDDescription = log.Description
 				}
