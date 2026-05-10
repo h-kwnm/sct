@@ -19,7 +19,7 @@ const (
 	extensionTypeLeafIndex uint8 = 0
 )
 
-// CT log
+// --- CT log list ---
 
 // CT log list schema
 // https://googlechrome.github.io/CertificateTransparency/log_lists.html
@@ -90,27 +90,7 @@ type LogList struct {
 	Operators []Operator `json:"operators"`
 }
 
-// checkpoint
-
-type Checkpoint struct {
-	Origin      string       `json:"origin"`
-	TreeSize    uint64       `json:"tree_size"`
-	RootHash    string       `json:"root_hash"`
-	SignedNotes []SignedNote `json:"signed_notes"`
-}
-
-type SignedNote struct {
-	KeyName             string              `json:"key_name"`
-	SignedNoteSignature SignedNoteSignature `json:"signature"`
-}
-
-type SignedNoteSignature struct {
-	KeyID     string `json:"key_id,omitempty"`
-	Signature string `json:"signature,omitempty"`
-	Unknown   string `json:"unknown,omitempty"`
-}
-
-// log cache
+// --- CT log cache ---
 
 type APIType string
 
@@ -144,7 +124,27 @@ type LogCache struct {
 	Logs           []CachedLog `json:"logs"`
 }
 
-// data tile
+// --- Static CT API: Checkpoint ---
+
+type Checkpoint struct {
+	Origin      string       `json:"origin"`
+	TreeSize    uint64       `json:"tree_size"`
+	RootHash    string       `json:"root_hash"`
+	SignedNotes []SignedNote `json:"signed_notes"`
+}
+
+type SignedNote struct {
+	KeyName             string              `json:"key_name"`
+	SignedNoteSignature SignedNoteSignature `json:"signature"`
+}
+
+type SignedNoteSignature struct {
+	KeyID     string `json:"key_id,omitempty"`
+	Signature string `json:"signature,omitempty"`
+	Unknown   string `json:"unknown,omitempty"`
+}
+
+// --- Static CT API: Data tile ---
 
 // TBSCertificate, PreCert format https://www.rfc-editor.org/rfc/rfc6962#section-3.2
 // ---
@@ -228,6 +228,8 @@ type DataTile struct {
 	Entries       []DataEntry `json:"entries"`
 }
 
+// --- SCT ---
+
 // https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#sct-extension
 //
 //	enum {
@@ -263,6 +265,8 @@ type SCT struct {
 	Timestamp        CTTimestamp   `json:"timestamp"`
 	CtExtensions     []CtExtension `json:"ct_extensions,omitempty"`
 }
+
+// --- Merkle tree ---
 
 // inclustion proof verification
 // https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#merkle-tree
@@ -308,7 +312,7 @@ type AuditResult struct {
 	Tiles               []TileAccess `json:"tiles"`
 }
 
-// RFC 6962
+// --- RFC 6962 data structures ---
 
 type SignedTreeHead struct {
 	TreeSize          uint64      `json:"tree_size"`
