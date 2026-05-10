@@ -16,6 +16,7 @@ func TestBuildTileIndex(t *testing.T) {
 		level     int
 		treeSize  uint64
 		want      string
+		wantErr   bool
 	}{
 		{
 			// Tile 0 of 2: not the max tile, so no .p suffix.
@@ -67,16 +68,23 @@ func TestBuildTileIndex(t *testing.T) {
 			want: "tile/0/x001/x000/x000/000",
 		},
 		{
-			// tileIndex >= 2^40 -> returns empty string.
-			name:      "tile index out of range returns empty string",
+			// tileIndex >= 10^12 -> out of range, returns error.
+			name:      "tile index out of range returns error",
 			tileIndex: (1 << 40) + 1, level: 0, treeSize: (1 << 40) + 2,
-			want: "",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := buildTileIndex(tt.tileIndex, tt.level, tt.treeSize)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("buildTileIndex(%d, %d, %d) expected error, got nil",
+						tt.tileIndex, tt.level, tt.treeSize)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
