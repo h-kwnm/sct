@@ -355,9 +355,7 @@ type Precert struct {
 
 func (p Precert) Marshal() []byte {
 	var b bytes.Buffer
-	if err := binary.Write(&b, binary.BigEndian, p.IssuerKeyHash[:]); err != nil {
-		panic(err)
-	}
+	binary.Write(&b, binary.BigEndian, p.IssuerKeyHash[:])
 
 	// TBSCertificate has 3 bytes length header as defined below.
 	// opaque TBSCertificate<1..2^24-1>
@@ -365,10 +363,7 @@ func (p Precert) Marshal() []byte {
 	b.WriteByte(byte(length >> 16))
 	b.WriteByte(byte(length >> 8))
 	b.WriteByte(byte(length))
-
-	if err := binary.Write(&b, binary.BigEndian, p.RawTbsCertificate); err != nil {
-		panic(err)
-	}
+	b.Write(p.RawTbsCertificate)
 
 	return b.Bytes()
 }
@@ -382,18 +377,10 @@ type TimestampedEntry struct {
 
 func (t TimestampedEntry) Marshal() []byte {
 	var b bytes.Buffer
-	if err := binary.Write(&b, binary.BigEndian, t.Timestamp); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(&b, binary.BigEndian, t.LogEntryType); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(&b, binary.BigEndian, t.Precert.Marshal()); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(&b, binary.BigEndian, t.CtExtensions); err != nil {
-		panic(err)
-	}
+	binary.Write(&b, binary.BigEndian, t.Timestamp)
+	binary.Write(&b, binary.BigEndian, t.LogEntryType)
+	b.Write(t.Precert.Marshal())
+	binary.Write(&b, binary.BigEndian, t.CtExtensions)
 	return b.Bytes()
 }
 
@@ -405,14 +392,8 @@ type MerkleTreeLeaf struct {
 
 func (l MerkleTreeLeaf) Marshal() []byte {
 	var b bytes.Buffer
-	if err := binary.Write(&b, binary.BigEndian, l.Version); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(&b, binary.BigEndian, l.MerkleLeafType); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(&b, binary.BigEndian, l.TimestampedEntry.Marshal()); err != nil {
-		panic(err)
-	}
+	binary.Write(&b, binary.BigEndian, l.Version)
+	binary.Write(&b, binary.BigEndian, l.MerkleLeafType)
+	b.Write(l.TimestampedEntry.Marshal())
 	return b.Bytes()
 }
