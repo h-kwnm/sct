@@ -249,9 +249,9 @@ type CtExtension struct {
 	Value  uint64 `json:"extension_value"`
 }
 
-type SctTimestamp uint64
+type CTTimestamp uint64
 
-func (t SctTimestamp) MarshalJSON() ([]byte, error) {
+func (t CTTimestamp) MarshalJSON() ([]byte, error) {
 	s := time.UnixMilli(int64(t)).UTC()
 	return json.Marshal(s)
 }
@@ -260,7 +260,7 @@ type SCT struct {
 	Version          uint8         `json:"version"`
 	LogID            string        `json:"log_id"`
 	LogIDDescription string        `json:"log_id_description"` // "description" the log in thelog list
-	Timestamp        SctTimestamp  `json:"timestamp"`
+	Timestamp        CTTimestamp   `json:"timestamp"`
 	CtExtensions     []CtExtension `json:"ct_extensions,omitempty"`
 }
 
@@ -310,18 +310,11 @@ type AuditResult struct {
 
 // RFC 6962
 
-type SthTimestamp uint64
-
-func (t SthTimestamp) MarshalJSON() ([]byte, error) {
-	s := time.UnixMilli(int64(t)).UTC()
-	return json.Marshal(s)
-}
-
 type SignedTreeHead struct {
-	TreeSize          uint64       `json:"tree_size"`
-	Timestamp         SthTimestamp `json:"timestamp"`
-	RootHash          string       `json:"sha256_root_hash"`
-	TreeHeadSignature string       `json:"tree_head_signature"`
+	TreeSize          uint64      `json:"tree_size"`
+	Timestamp         CTTimestamp `json:"timestamp"`
+	RootHash          string      `json:"sha256_root_hash"`
+	TreeHeadSignature string      `json:"tree_head_signature"`
 }
 
 type RFC6962Proof struct {
@@ -369,7 +362,7 @@ func (p Precert) Marshal() []byte {
 }
 
 type TimestampedEntry struct {
-	Timestamp    SctTimestamp
+	Timestamp    CTTimestamp
 	LogEntryType uint16  // for now, only precert_entry(1) type
 	Precert      Precert // for now, only precert type
 	CtExtensions uint16  // only for RFC 6962, so always "0x0000"

@@ -158,7 +158,7 @@ func TestParseCertSCTRealCert(t *testing.T) {
 	if sct0.LogID != "yzj3FYl8hKFEX1vB3fvJbvKaWc1HCmkFhbDLFMMUWOc=" {
 		t.Errorf("SCT[0].LogID = %q", sct0.LogID)
 	}
-	if sct0.Timestamp == SctTimestamp(0) {
+	if sct0.Timestamp == CTTimestamp(0) {
 		t.Error("SCT[0].Timestamp is zero")
 	}
 	if len(sct0.CtExtensions) != 0 {
@@ -210,7 +210,7 @@ func TestParseCertSCTLeafIndex(t *testing.T) {
 	if sct.Version != 0 {
 		t.Errorf("Version = %d, want 0", sct.Version)
 	}
-	wantTs := SctTimestamp(wantTsMillis)
+	wantTs := CTTimestamp(wantTsMillis)
 	if sct.Timestamp != wantTs {
 		t.Errorf("Timestamp = %v, want %v", sct.Timestamp, wantTs)
 	}

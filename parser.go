@@ -390,7 +390,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				if err := binary.Read(sr, binary.BigEndian, &ts); err != nil {
 					return nil, fmt.Errorf("failed to read timestamp: %w", err)
 				}
-				sct.Timestamp = SctTimestamp(ts)
+				sct.Timestamp = CTTimestamp(ts)
 
 				ctExt, err := parseCtExtension(sr)
 				if err != nil {
