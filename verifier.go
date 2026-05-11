@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// --- Static CT API ---
+
 const tileBitWidth = 8              // 8
 const tileWidth = 1 << tileBitWidth // 256
 
@@ -91,6 +93,7 @@ func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 
 	return indexPath, nil
 }
+
 func buildTileIndex(tileIndex uint64, level int, treeSize uint64) (string, error) {
 	maxTileIndex := (treeSize - 1) / (tileWidth << (tileBitWidth * level))
 	var partialIndex uint64 = 0
@@ -232,4 +235,64 @@ func getAuditTiles(leafIndex, treeSize uint64) AuditTile {
 		LeafIndex: leafIndex,
 		TreeSize:  treeSize,
 	}
+}
+
+// --- RFC 6962 ---
+
+// Verify audit path returned by get-proof-by-hash, following the steps in RFC 9162
+// https://www.rfc-editor.org/rfc/rfc9162#name-verifying-an-inclusion-proo
+func verifyInclusionRFC6962(pr *RFC6962ProofResult) error {
+	ap := pr.Proof.AuditPath
+
+	if len(ap) == 0 {
+		pr.VerificationSuccess = (pr.LeafHash == pr.RootHash)
+		return nil
+	}
+
+	lh, err := base64.StdEncoding.DecodeString(pr.LeafHash)
+	if err != nil {
+		return fmt.Errorf("failed to base64-decode leaf hash: %w", err)
+	}
+	if len(lh) != 32 {
+		return fmt.Errorf("unexpected leaf hash length %d", len(lh))
+	}
+	current := [32]byte(lh)
+	fn := pr.Proof.LeafIndex
+	sn := pr.TreeSize - 1
+
+	for i, b64Hash := range ap {
+		if sn == 0 {
+			return fmt.Errorf("verification failed, unexpected sn==0")
+		}
+		node, err := base64.StdEncoding.DecodeString(b64Hash)
+		if err != nil {
+			return fmt.Errorf("failed to base64-decode audit path node hash at %d: %w", i, err)
+		}
+		if len(node) != 32 {
+			return fmt.Errorf("unexpected node hash length %d", len(node))
+		}
+		nodeHash := [32]byte(node)
+
+		if fn&1 == 1 || fn == sn {
+			current = merkleHash(nodeHash, current)
+			for fn != 0 && fn&1 == 0 {
+				fn >>= 1
+				sn >>= 1
+			}
+		} else {
+			current = merkleHash(current, nodeHash)
+		}
+		fn >>= 1
+		sn >>= 1
+	}
+
+	if sn != 0 {
+		return fmt.Errorf("verification failed, unexpected sn!=1")
+	}
+
+	h := base64.StdEncoding.EncodeToString(current[:])
+
+	pr.VerificationSuccess = (pr.RootHash == h)
+
+	return nil
 }

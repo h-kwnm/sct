@@ -71,6 +71,13 @@ func runGetProofByHash(args []string) {
 
 	}
 
+	for i := range results {
+		if err := verifyInclusionRFC6962(&results[i]); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to verify RFC 6962 audit proof: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
 	j, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to marshal audit proof result JSON: %v\n", err)

@@ -327,11 +327,13 @@ type RFC6962Proof struct {
 }
 
 type RFC6962ProofResult struct {
-	FetchedAt time.Time    `json:"fetched_at"`
-	Log       *CachedLog   `json:"log"`
-	TreeSize  uint64       `json:"tree_size"`
-	Hash      string       `json:"hash"`
-	Proof     RFC6962Proof `json:"audit_proof"`
+	FetchedAt           time.Time    `json:"fetched_at"`
+	VerificationSuccess bool         `json:"verification_success"`
+	Log                 *CachedLog   `json:"log"`
+	TreeSize            uint64       `json:"tree_size"`
+	RootHash            string       `json:"root_hash"`
+	LeafHash            string       `json:"leaf_hash"`
+	Proof               RFC6962Proof `json:"audit_proof"`
 }
 
 type TbsCertificate struct {

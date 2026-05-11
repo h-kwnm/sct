@@ -89,7 +89,8 @@ func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
 	return RFC6962ProofResult{
 		FetchedAt: ts,
 		Log:       log,
-		Hash:      h,
+		RootHash:  sth.RootHash,
+		LeafHash:  h,
 		TreeSize:  sth.TreeSize,
 		Proof:     p,
 	}, nil
