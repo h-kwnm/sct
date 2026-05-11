@@ -5,8 +5,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/binary"
 	"math/big"
 	"testing"
@@ -222,6 +224,112 @@ func TestParseDataTileTruncated(t *testing.T) {
 	_, err := parseDataTile(tile[:len(tile)/2])
 	if err == nil {
 		t.Error("expected error for truncated tile, got nil")
+	}
+}
+
+// --- parseTile ---
+
+func TestParseTileEmpty(t *testing.T) {
+	tile, err := parseTile(bytes.NewReader(nil))
+	if err != nil {
+		t.Fatalf("parseTile() error = %v", err)
+	}
+	if len(tile.Hashes) != 0 {
+		t.Errorf("got %d hashes, want 0", len(tile.Hashes))
+	}
+}
+
+func TestParseTile(t *testing.T) {
+	const n = 5
+	hashes := make([][32]byte, n)
+	var buf bytes.Buffer
+	for i := range hashes {
+		hashes[i] = sha256.Sum256([]byte{byte(i)})
+		buf.Write(hashes[i][:])
+	}
+
+	tile, err := parseTile(&buf)
+	if err != nil {
+		t.Fatalf("parseTile() error = %v", err)
+	}
+	if len(tile.Hashes) != n {
+		t.Fatalf("got %d hashes, want %d", len(tile.Hashes), n)
+	}
+	for i, h := range tile.Hashes {
+		if h != hashes[i] {
+			t.Errorf("hash[%d] = %x, want %x", i, h, hashes[i])
+		}
+	}
+}
+
+func TestParseTileTruncated(t *testing.T) {
+	// 17 bytes is not a multiple of 32, so io.ReadFull returns ErrUnexpectedEOF
+	_, err := parseTile(bytes.NewReader(make([]byte, 17)))
+	if err == nil {
+		t.Error("expected error for truncated tile, got nil")
+	}
+}
+
+// --- trimSctExtension ---
+
+func TestTrimSctExtension(t *testing.T) {
+	var logID [32]byte
+	der := buildCertWithSCTs(t, []struct {
+		logID     [32]byte
+		tsMillis  uint64
+		leafIndex uint64
+	}{
+		{logID: logID, tsMillis: 1_700_000_000_000, leafIndex: 0},
+	})
+
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatalf("ParseCertificate: %v", err)
+	}
+
+	trimmed, err := trimSctExtension(cert.RawTBSCertificate)
+	if err != nil {
+		t.Fatalf("trimSctExtension: %v", err)
+	}
+
+	var tbs TbsCertificate
+	if _, err := asn1.Unmarshal(trimmed, &tbs); err != nil {
+		t.Fatalf("re-parse TBS: %v", err)
+	}
+	for _, ext := range tbs.Extensions {
+		if ext.Id.Equal(oidSCTList) {
+			t.Error("SCT extension still present after trimming")
+		}
+	}
+	// original cert had the SCT extension; trimmed must have one fewer extension
+	if len(tbs.Extensions) != len(cert.Extensions)-1 {
+		t.Errorf("extension count: got %d, want %d", len(tbs.Extensions), len(cert.Extensions)-1)
+	}
+}
+
+func TestTrimSctExtensionNoSCT(t *testing.T) {
+	certDER := generateSelfSignedCert(t)
+	cert, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		t.Fatalf("ParseCertificate: %v", err)
+	}
+
+	trimmed, err := trimSctExtension(cert.RawTBSCertificate)
+	if err != nil {
+		t.Fatalf("trimSctExtension: %v", err)
+	}
+
+	var tbs TbsCertificate
+	if _, err := asn1.Unmarshal(trimmed, &tbs); err != nil {
+		t.Fatalf("re-parse TBS: %v", err)
+	}
+	for _, ext := range tbs.Extensions {
+		if ext.Id.Equal(oidSCTList) {
+			t.Error("SCT extension found in cert that had none")
+		}
+	}
+	if len(tbs.Extensions) != len(cert.Extensions) {
+		t.Errorf("extension count changed: got %d, want %d", len(tbs.Extensions), len(cert.Extensions))
 	}
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 )
@@ -69,6 +70,119 @@ func TestLogStateMarshalJSON(t *testing.T) {
 				t.Errorf("got %s, want %s", b, tt.want)
 			}
 		})
+	}
+}
+
+// --- CTTimestamp ---
+
+func TestCTTimestampMarshalJSON(t *testing.T) {
+	// 1_700_000_000_000 ms = 2023-11-14T22:13:20Z
+	ts := CTTimestamp(1_700_000_000_000)
+	b, err := json.Marshal(ts)
+	if err != nil {
+		t.Fatalf("MarshalJSON() error = %v", err)
+	}
+	want := `"2023-11-14T22:13:20Z"`
+	if string(b) != want {
+		t.Errorf("got %s, want %s", b, want)
+	}
+}
+
+// --- Precert.Marshal ---
+
+func TestPrecertMarshal(t *testing.T) {
+	var isk [32]byte
+	for i := range isk {
+		isk[i] = byte(i)
+	}
+	tbs := []byte{0x30, 0x05, 0x02, 0x03, 0x01, 0x02, 0x03}
+
+	got := Precert{IssuerKeyHash: isk, RawTbsCertificate: tbs}.Marshal()
+
+	wantLen := 32 + 3 + len(tbs)
+	if len(got) != wantLen {
+		t.Fatalf("len = %d, want %d", len(got), wantLen)
+	}
+	// first 32 bytes: issuer key hash
+	if !bytes.Equal(got[:32], isk[:]) {
+		t.Error("issuer key hash mismatch")
+	}
+	// 3-byte big-endian TBS length
+	gotLen := int(got[32])<<16 | int(got[33])<<8 | int(got[34])
+	if gotLen != len(tbs) {
+		t.Errorf("TBS length field = %d, want %d", gotLen, len(tbs))
+	}
+	// TBS content
+	if !bytes.Equal(got[35:], tbs) {
+		t.Error("TBS content mismatch")
+	}
+}
+
+// --- TimestampedEntry.Marshal ---
+
+func TestTimestampedEntryMarshal(t *testing.T) {
+	const ts = CTTimestamp(1_700_000_000_000)
+	tbs := []byte{0xAA}
+	entry := TimestampedEntry{
+		Timestamp:    ts,
+		LogEntryType: entryTypePrecert,
+		Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTbsCertificate: tbs},
+		CtExtensions: 0x0000,
+	}
+
+	got := entry.Marshal()
+
+	// first 8 bytes: timestamp (big-endian uint64)
+	var gotTs uint64
+	for i := range 8 {
+		gotTs = gotTs<<8 | uint64(got[i])
+	}
+	if gotTs != uint64(ts) {
+		t.Errorf("timestamp = %d, want %d", gotTs, uint64(ts))
+	}
+	// bytes 8–9: entry_type
+	gotType := uint16(got[8])<<8 | uint16(got[9])
+	if gotType != entryTypePrecert {
+		t.Errorf("entry_type = %d, want %d", gotType, entryTypePrecert)
+	}
+	// last 2 bytes: ct_extensions = 0x0000
+	n := len(got)
+	gotExt := uint16(got[n-2])<<8 | uint16(got[n-1])
+	if gotExt != 0 {
+		t.Errorf("ct_extensions = %d, want 0", gotExt)
+	}
+	// total length: 8 (ts) + 2 (type) + Precert.Marshal() + 2 (ext)
+	wantLen := 8 + 2 + len(entry.Precert.Marshal()) + 2
+	if len(got) != wantLen {
+		t.Errorf("len = %d, want %d", len(got), wantLen)
+	}
+}
+
+// --- MerkleTreeLeaf.Marshal ---
+
+func TestMerkleTreeLeafMarshal(t *testing.T) {
+	leaf := MerkleTreeLeaf{
+		Version:        0,
+		MerkleLeafType: 0,
+		TimestampedEntry: TimestampedEntry{
+			Timestamp:    CTTimestamp(1_700_000_000_000),
+			LogEntryType: entryTypePrecert,
+			Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTbsCertificate: []byte{0xBB}},
+			CtExtensions: 0x0000,
+		},
+	}
+
+	got := leaf.Marshal()
+
+	if got[0] != 0 {
+		t.Errorf("version = %d, want 0", got[0])
+	}
+	if got[1] != 0 {
+		t.Errorf("leaf_type = %d, want 0", got[1])
+	}
+	want := append([]byte{0, 0}, leaf.TimestampedEntry.Marshal()...)
+	if !bytes.Equal(got, want) {
+		t.Error("MerkleTreeLeaf.Marshal() content mismatch")
 	}
 }
 

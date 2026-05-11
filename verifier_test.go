@@ -7,6 +7,78 @@ import (
 	"testing"
 )
 
+// --- formatTileString ---
+
+func TestFormatTileString(t *testing.T) {
+	tests := []struct {
+		index        uint64
+		partialIndex uint64
+		want         string
+		wantErr      bool
+	}{
+		{0, 0, "000", false},
+		{1, 0, "001", false},
+		{999, 0, "999", false},
+		{0, 42, "000.p/42", false},
+		{999, 1, "999.p/1", false},
+		{1000, 0, "x001/000", false},
+		{1000, 7, "x001/000.p/7", false},
+		{999999, 0, "x999/999", false},
+		{1000000, 0, "x001/x000/000", false},
+		{999999999, 0, "x999/x999/999", false},
+		{1000000000, 0, "x001/x000/x000/000", false},
+		{(1 << 40) + 1, 0, "", true},
+	}
+	for _, tt := range tests {
+		got, err := formatTileString(tt.index, tt.partialIndex)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("formatTileString(%d, %d) error = %v, wantErr %v",
+				tt.index, tt.partialIndex, err, tt.wantErr)
+			continue
+		}
+		if !tt.wantErr && got != tt.want {
+			t.Errorf("formatTileString(%d, %d) = %q, want %q",
+				tt.index, tt.partialIndex, got, tt.want)
+		}
+	}
+}
+
+// --- buildIndex ---
+
+func TestBuildIndex(t *testing.T) {
+	tests := []struct {
+		leafIndex uint64
+		treeSize  uint64
+		want      string
+		wantErr   bool
+	}{
+		// last tile is also the only tile, full (treeSize%256==0 → no .p suffix)
+		{0, 256, "000", false},
+		{255, 256, "000", false},
+		// last tile is partial
+		{0, 3, "000.p/3", false},
+		{2, 3, "000.p/3", false},
+		// leaf in a non-max tile (no partial)
+		{0, 512, "000", false},
+		// leaf in the max tile, full
+		{256, 512, "001", false},
+		// leaf index beyond tree
+		{512, 256, "", true},
+	}
+	for _, tt := range tests {
+		got, err := buildIndex(tt.leafIndex, tt.treeSize)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("buildIndex(%d, %d) error = %v, wantErr %v",
+				tt.leafIndex, tt.treeSize, err, tt.wantErr)
+			continue
+		}
+		if !tt.wantErr && got != tt.want {
+			t.Errorf("buildIndex(%d, %d) = %q, want %q",
+				tt.leafIndex, tt.treeSize, got, tt.want)
+		}
+	}
+}
+
 // --- buildTileIndex ---
 
 func TestBuildTileIndex(t *testing.T) {
@@ -686,4 +758,199 @@ func TestGetAuditTile(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- merkleHash ---
+
+func TestMerkleHash(t *testing.T) {
+	// RFC 6962 §2.1: HASH(0x01 || left || right)
+	left := sha256.Sum256([]byte("left"))
+	right := sha256.Sum256([]byte("right"))
+
+	var buf [65]byte
+	buf[0] = 0x01
+	copy(buf[1:33], left[:])
+	copy(buf[33:65], right[:])
+	want := sha256.Sum256(buf[:])
+
+	if got := merkleHash(left, right); got != want {
+		t.Errorf("merkleHash() = %x, want %x", got, want)
+	}
+}
+
+func TestMerkleHashNotCommutative(t *testing.T) {
+	left := sha256.Sum256([]byte("left"))
+	right := sha256.Sum256([]byte("right"))
+	if merkleHash(left, right) == merkleHash(right, left) {
+		t.Error("merkleHash should not be commutative for distinct inputs")
+	}
+}
+
+// --- verifyInclusionRFC6962 ---
+
+// rfc6962Path returns the RFC 6962 §2.1.1 audit path for leaf m within
+// leaves, in leaf-to-root order (path[0] = sibling closest to leaf).
+func rfc6962Path(m int, leaves [][32]byte) [][32]byte {
+	n := len(leaves)
+	if n <= 1 {
+		return nil
+	}
+	k := 1 << (bits.Len(uint(n-1)) - 1)
+	if m < k {
+		path := rfc6962Path(m, leaves[:k])
+		return append(path, testMTH(leaves[k:]))
+	}
+	path := rfc6962Path(m-k, leaves[k:])
+	return append(path, testMTH(leaves[:k]))
+}
+
+// buildRFC6962ProofResult constructs an RFC6962ProofResult whose audit path
+// and root hash are consistent with the given leaf set and leaf index.
+func buildRFC6962ProofResult(leaves [][32]byte, m int) *RFC6962ProofResult {
+	path := rfc6962Path(m, leaves)
+	auditPath := make([]string, len(path))
+	for i, h := range path {
+		auditPath[i] = base64.StdEncoding.EncodeToString(h[:])
+	}
+	root := testMTH(leaves)
+	return &RFC6962ProofResult{
+		TreeSize: uint64(len(leaves)),
+		RootHash: base64.StdEncoding.EncodeToString(root[:]),
+		LeafHash: base64.StdEncoding.EncodeToString(leaves[m][:]),
+		Proof: RFC6962Proof{
+			LeafIndex: uint64(m),
+			AuditPath: auditPath,
+		},
+	}
+}
+
+func TestVerifyInclusionRFC6962(t *testing.T) {
+	verify := func(t *testing.T, m int, leaves [][32]byte) bool {
+		t.Helper()
+		pr := buildRFC6962ProofResult(leaves, m)
+		if err := verifyInclusionRFC6962(pr); err != nil {
+			t.Fatalf("verifyInclusionRFC6962 error: %v", err)
+		}
+		return pr.VerificationSuccess
+	}
+
+	// --- success cases ---
+
+	t.Run("n=1 m=0", func(t *testing.T) {
+		if !verify(t, 0, testLeaves(1)) {
+			t.Error("want true")
+		}
+	})
+
+	for _, tc := range []struct {
+		name string
+		n, m int
+	}{
+		// power-of-2 sizes
+		{"n=2 m=0", 2, 0},
+		{"n=2 m=1", 2, 1}, // fn==sn at first step
+		{"n=4 m=0", 4, 0},
+		{"n=4 m=3", 4, 3},
+		// non-power-of-2: exercises fn==sn with inner shift loop
+		{"n=3 m=0", 3, 0},
+		{"n=3 m=1", 3, 1},
+		{"n=3 m=2", 3, 2}, // fn==sn, inner loop shifts once
+		{"n=5 m=0", 5, 0},
+		{"n=5 m=4", 5, 4}, // fn==sn, inner loop shifts twice
+		{"n=7 m=0", 7, 0},
+		{"n=7 m=3", 7, 3},
+		{"n=7 m=5", 7, 5},
+		{"n=7 m=6", 7, 6}, // fn==sn, inner loop shifts twice
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if !verify(t, tc.m, testLeaves(tc.n)) {
+				t.Error("want true")
+			}
+		})
+	}
+
+	// --- failure cases ---
+
+	t.Run("wrong root returns false", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(4), 1)
+		wrong := sha256.Sum256([]byte("wrong"))
+		pr.RootHash = base64.StdEncoding.EncodeToString(wrong[:])
+		if err := verifyInclusionRFC6962(pr); err != nil {
+			t.Fatalf("error: %v", err)
+		}
+		if pr.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
+
+	t.Run("n=1 wrong root returns false", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(1), 0)
+		wrong := sha256.Sum256([]byte("wrong"))
+		pr.RootHash = base64.StdEncoding.EncodeToString(wrong[:])
+		if err := verifyInclusionRFC6962(pr); err != nil {
+			t.Fatalf("error: %v", err)
+		}
+		if pr.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
+
+	t.Run("tampered leaf hash returns false", func(t *testing.T) {
+		leaves := testLeaves(4)
+		pr := buildRFC6962ProofResult(leaves, 1)
+		pr.LeafHash = base64.StdEncoding.EncodeToString(leaves[3][:])
+		if err := verifyInclusionRFC6962(pr); err != nil {
+			t.Fatalf("error: %v", err)
+		}
+		if pr.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
+
+	t.Run("tampered audit path returns false", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(4), 1)
+		node, _ := base64.StdEncoding.DecodeString(pr.Proof.AuditPath[0])
+		node[0] ^= 0xFF
+		pr.Proof.AuditPath[0] = base64.StdEncoding.EncodeToString(node)
+		if err := verifyInclusionRFC6962(pr); err != nil {
+			t.Fatalf("error: %v", err)
+		}
+		if pr.VerificationSuccess {
+			t.Error("want false")
+		}
+	})
+
+	// --- error cases ---
+
+	t.Run("invalid base64 leaf hash", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(2), 0)
+		pr.LeafHash = "not valid base64!!!"
+		if err := verifyInclusionRFC6962(pr); err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+
+	t.Run("invalid base64 audit path node", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(2), 0)
+		pr.Proof.AuditPath[0] = "not valid base64!!!"
+		if err := verifyInclusionRFC6962(pr); err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+
+	t.Run("leaf hash wrong length", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(2), 0)
+		pr.LeafHash = base64.StdEncoding.EncodeToString([]byte{1, 2, 3})
+		if err := verifyInclusionRFC6962(pr); err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+
+	t.Run("audit path node wrong length", func(t *testing.T) {
+		pr := buildRFC6962ProofResult(testLeaves(2), 0)
+		pr.Proof.AuditPath[0] = base64.StdEncoding.EncodeToString([]byte{1, 2, 3})
+		if err := verifyInclusionRFC6962(pr); err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
 }
