@@ -29,9 +29,17 @@ func main() {
 	}
 
 	switch args[0] {
+	// --- Common ---
 	case "logs":
 		runLogs(args[1:])
 		return
+	case "audit-path":
+		runAuditPath(args[1:])
+		return
+	case "version":
+		fmt.Println(version)
+		return
+	// --- Static CT API ---
 	case "checkpoint":
 		runCheckpoint(args[1:])
 		return
@@ -44,20 +52,15 @@ func main() {
 	case "audit":
 		runAudit(args[1:])
 		return
-	case "audit-path":
-		runAuditPath(args[1:])
-		return
 	case "audit-tile":
 		runAuditTile(args[1:])
 		return
+	// --- RFC 6962 ---
 	case "get-sth":
 		runGetSth(args[1:])
 		return
 	case "get-proof-by-hash":
 		runGetProofByHash(args[1:])
-		return
-	case "version":
-		fmt.Println(version)
 		return
 	default:
 		fmt.Printf("unknown command: %s\n", args[0])
