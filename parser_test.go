@@ -270,9 +270,9 @@ func TestParseTileTruncated(t *testing.T) {
 	}
 }
 
-// --- trimSctExtension ---
+// --- trimSCTExtension ---
 
-func TestTrimSctExtension(t *testing.T) {
+func TestTrimSCTExtension(t *testing.T) {
 	var logID [32]byte
 	der := buildCertWithSCTs(t, []struct {
 		logID     [32]byte
@@ -287,9 +287,9 @@ func TestTrimSctExtension(t *testing.T) {
 		t.Fatalf("ParseCertificate: %v", err)
 	}
 
-	trimmed, err := trimSctExtension(cert.RawTBSCertificate)
+	trimmed, err := trimSCTExtension(cert.RawTBSCertificate)
 	if err != nil {
-		t.Fatalf("trimSctExtension: %v", err)
+		t.Fatalf("trimSCTExtension: %v", err)
 	}
 
 	var tbs TbsCertificate
@@ -307,16 +307,16 @@ func TestTrimSctExtension(t *testing.T) {
 	}
 }
 
-func TestTrimSctExtensionNoSCT(t *testing.T) {
+func TestTrimSCTExtensionNoSCT(t *testing.T) {
 	certDER := generateSelfSignedCert(t)
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {
 		t.Fatalf("ParseCertificate: %v", err)
 	}
 
-	trimmed, err := trimSctExtension(cert.RawTBSCertificate)
+	trimmed, err := trimSCTExtension(cert.RawTBSCertificate)
 	if err != nil {
-		t.Fatalf("trimSctExtension: %v", err)
+		t.Fatalf("trimSCTExtension: %v", err)
 	}
 
 	var tbs TbsCertificate

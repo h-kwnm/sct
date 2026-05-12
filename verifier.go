@@ -146,13 +146,13 @@ func merkleHash(left, right [32]byte) [32]byte {
 	return sha256.Sum256(buf[:])
 }
 
-func computeMth(hashes [][32]byte) [32]byte {
+func computeMTH(hashes [][32]byte) [32]byte {
 	l := len(hashes)
 	if l == 1 {
 		return hashes[0]
 	}
 
-	return merkleHash(computeMth(hashes[:l/2]), computeMth(hashes[l/2:]))
+	return merkleHash(computeMTH(hashes[:l/2]), computeMTH(hashes[l/2:]))
 }
 
 // computeNodeHash returns the Merkle hash of the subtree [start, end) using
@@ -179,7 +179,7 @@ func computeNodeHash(start, end, n uint64, tiles map[string]Tile) [32]byte {
 		}
 		count := 1 << (h % tileBitWidth)
 		offset := int(nodeIndex % tileWidth)
-		return computeMth(tiles[p].Hashes[offset : offset+count])
+		return computeMTH(tiles[p].Hashes[offset : offset+count])
 	}
 	k := uint64(1) << (h - 1)
 	return merkleHash(computeNodeHash(start, start+k, n, tiles), computeNodeHash(start+k, end, n, tiles))

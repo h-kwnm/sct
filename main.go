@@ -47,7 +47,7 @@ func main() {
 		runData(args[1:])
 		return
 	case "get-sct":
-		runGetSct(args[1:])
+		runGetSCT(args[1:])
 		return
 	case "audit":
 		runAudit(args[1:])

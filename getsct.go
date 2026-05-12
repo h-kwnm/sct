@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func runGetSct(args []string) {
+func runGetSCT(args []string) {
 	fs := flag.NewFlagSet("get-sct", flag.ExitOnError)
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
 	url := fs.String("url", "", "URL to fetch server certificate")

@@ -346,7 +346,7 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 
 // x.509 cert sct extensions
 
-func trimSctExtension(rawTbs []byte) ([]byte, error) {
+func trimSCTExtension(rawTbs []byte) ([]byte, error) {
 	var tbs TbsCertificate
 	if _, err := asn1.Unmarshal(rawTbs, &tbs); err != nil {
 		return nil, err
@@ -403,11 +403,11 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 
 			r := bytes.NewReader(sctListBytes)
 
-			var totalSctLen uint16
-			if err := binary.Read(r, binary.BigEndian, &totalSctLen); err != nil {
+			var totalSCTLen uint16
+			if err := binary.Read(r, binary.BigEndian, &totalSCTLen); err != nil {
 				return nil, fmt.Errorf("failed to read SCT list length: %v", err)
 			}
-			sctListData := make([]byte, totalSctLen)
+			sctListData := make([]byte, totalSCTLen)
 			_, err = io.ReadFull(r, sctListData)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read sct extension list: %v", err)
@@ -492,7 +492,7 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 	// build Precert
 	// - isk (32 bytes)
 	// - tbs
-	tbs, err := trimSctExtension(cert.RawTBSCertificate)
+	tbs, err := trimSCTExtension(cert.RawTBSCertificate)
 	if err != nil {
 		return []MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TbsCertificate: %w", err)
 	}

@@ -277,7 +277,7 @@ func TestVerifyInclusion(t *testing.T) {
 		tiles := map[string]Tile{
 			index1: {Hashes: leaves[0:256]},
 			index2: {Hashes: leaves[256:257]},
-			index3: {Hashes: [][32]byte{computeMth(leaves[0:256])}},
+			index3: {Hashes: [][32]byte{computeMTH(leaves[0:256])}},
 		}
 		if !verify(t, 256, leaves, tiles) {
 			t.Error("want true")
