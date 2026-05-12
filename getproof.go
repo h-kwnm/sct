@@ -14,7 +14,6 @@ func runGetProofByHash(args []string) {
 	fs := flag.NewFlagSet("get-proof-by-hash", flag.ExitOnError)
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
 	issFile := fs.String("iss", "", "PEM-formatted issuer certificate")
-	logID := fs.Int("?log", 0, "log id (see 'sct logs --type rfc6962')")
 	url := fs.String("url", "", "URL to fetch server certificate")
 	fs.Parse(args)
 
@@ -65,7 +64,7 @@ func runGetProofByHash(args []string) {
 
 		results[i], err = fetchProofByHash(b64Hash, logs[i])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logID, err)
+			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", results[i].Log.ID, err)
 			os.Exit(1)
 		}
 
