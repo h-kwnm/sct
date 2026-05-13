@@ -95,3 +95,48 @@ func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
 		Proof:     p,
 	}, nil
 }
+
+func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResponse, error) {
+	sth, err := fetchSth(log)
+	if err != nil {
+		return GetEntriesResponse{}, err
+	}
+	if index+offset >= sth.TreeSize {
+		return GetEntriesResponse{}, fmt.Errorf("invalid index/offset(index+offset=%d must be less than tree size=%d)", index+offset, sth.TreeSize)
+	}
+
+	u := strings.TrimSuffix(log.URL, "/")
+	params := url.Values{}
+	params.Set("start", strconv.FormatUint(index, 10))
+	params.Set("end", strconv.FormatUint(index+offset, 10))
+	endpoint := fmt.Sprintf("%s/ct/v1/get-entries?%s", u, params.Encode())
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
+	if err != nil {
+		return GetEntriesResponse{}, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return GetEntriesResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return GetEntriesResponse{}, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
+	if err != nil {
+		return GetEntriesResponse{}, err
+	}
+
+	var entries GetEntriesResponse
+	if err := json.Unmarshal(body, &entries); err != nil {
+		return GetEntriesResponse{}, err
+	}
+
+	return entries, nil
+
+}

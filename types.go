@@ -425,3 +425,10 @@ func (l MerkleTreeLeaf) Marshal() []byte {
 	b.Write(l.TimestampedEntry.Marshal())
 	return b.Bytes()
 }
+
+type GetEntriesResponse struct {
+	Entries []struct {
+		LeafInput string `json:"leaf_input"`
+		ExtraData string `json:"extra_data"`
+	} `json:"entries"`
+}
