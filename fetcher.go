@@ -125,8 +125,8 @@ func fetchAcceptedRootCertificate(log *CachedLog) (*AcceptedRootCertificates, er
 			SubjectKeyId:   fmt.Sprintf("%x", cert.SubjectKeyId),
 			AuthorityKeyId: fmt.Sprintf("%x", cert.AuthorityKeyId),
 			Policies:       cert.Policies,
-			KeyUsage:       cert.KeyUsage,
-			ExtKeyUsage:    cert.ExtKeyUsage,
+			KeyUsage:       parseKeyUsage(cert.KeyUsage),
+			ExtKeyUsage:    parseExtKeyUsage(cert.ExtKeyUsage),
 		})
 	}
 

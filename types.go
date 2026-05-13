@@ -27,21 +27,21 @@ type GetRootsResponse struct {
 }
 
 type RootCertificate struct {
-	Raw            string             `json:"raw"`
-	ParseError     string             `json:"parse_error,omitempty"`
-	Version        int                `json:"version,omitempty"`
-	SerialNumber   string             `json:"serial,omitempty"`
-	SignatureAlg   string             `json:"sig_alg,omitempty"`
-	Issuer         string             `json:"issuer,omitempty"`
-	NotBefore      time.Time          `json:"not_before,omitempty"`
-	NotAfter       time.Time          `json:"not_after,omitempty"`
-	Subject        string             `json:"subject,omitempty"`
-	PublicKeyAlg   string             `json:"pubkey_alg,omitempty"`
-	SubjectKeyId   string             `json:"ski,omitempty"`
-	AuthorityKeyId string             `json:"aki,omitempty"`
-	Policies       []x509.OID         `json:"policies,omitempty"`
-	KeyUsage       x509.KeyUsage      `json:"key_usage,omitempty"`
-	ExtKeyUsage    []x509.ExtKeyUsage `json:"ext_key_usage,omitempty"`
+	Raw            string     `json:"raw"`
+	ParseError     string     `json:"parse_error,omitempty"`
+	Version        int        `json:"version,omitempty"`
+	SerialNumber   string     `json:"serial,omitempty"`
+	SignatureAlg   string     `json:"sig_alg,omitempty"`
+	Issuer         string     `json:"issuer,omitempty"`
+	NotBefore      time.Time  `json:"not_before,omitempty"`
+	NotAfter       time.Time  `json:"not_after,omitempty"`
+	Subject        string     `json:"subject,omitempty"`
+	PublicKeyAlg   string     `json:"pubkey_alg,omitempty"`
+	SubjectKeyId   string     `json:"ski,omitempty"`
+	AuthorityKeyId string     `json:"aki,omitempty"`
+	Policies       []x509.OID `json:"policies,omitempty"`
+	KeyUsage       []string   `json:"key_usage,omitempty"`
+	ExtKeyUsage    []string   `json:"ext_key_usage,omitempty"`
 }
 
 type AcceptedRootCertificates struct {
