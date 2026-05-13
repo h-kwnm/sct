@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -49,6 +53,86 @@ func fetchLogList() (*LogList, error) {
 	}
 
 	return &logList, nil
+}
+
+func fetchAcceptedRootCertificate(log *CachedLog) (*AcceptedRootCertificates, error) {
+	var u string
+	switch log.APIType {
+	case APITypeRFC6962:
+		u = log.URL
+	case APITypeStaticCT:
+		u = log.SubmissionURL
+	default:
+		return nil, fmt.Errorf("unexpected API type %s", log.APIType)
+	}
+	u = strings.TrimSuffix(u, "/")
+	endpoint := fmt.Sprintf("%s/ct/v1/get-roots", u)
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request to %s failed: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body url=%s: %w", endpoint, err)
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected response status code %d: %s", resp.StatusCode, endpoint)
+	}
+
+	var res GetRootsResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response body to JSON: %w", err)
+	}
+
+	var roots []RootCertificate
+	for i, root := range res.Certificates {
+		d, err := base64.StdEncoding.DecodeString(root)
+		if err != nil {
+			return &AcceptedRootCertificates{}, fmt.Errorf("failed to decode base64-encoded root certificate at %d: %w", i, err)
+		}
+		cert, err := x509.ParseCertificate(d)
+		if err != nil {
+			// it is known that parsing some legacy root certificates prodeces an error because of RFC 5280 violation
+			// example errors:
+			// - "x509: negative serial number"
+			// - "x509: invalid RDNSequence: invalid attribute value: unsupported string type: 3"
+			slog.Warn("failed to parse root certificate, skipped", "location", i, "err", err, "cert", root)
+			roots = append(roots, RootCertificate{
+				Raw:        root,
+				ParseError: err.Error(),
+			})
+			continue
+		}
+		roots = append(roots, RootCertificate{
+			Raw:            root,
+			Version:        cert.Version,
+			SerialNumber:   fmt.Sprintf("%x", cert.SerialNumber),
+			SignatureAlg:   cert.SignatureAlgorithm.String(),
+			Issuer:         cert.Issuer.String(),
+			NotBefore:      cert.NotBefore,
+			NotAfter:       cert.NotAfter,
+			Subject:        cert.Subject.String(),
+			PublicKeyAlg:   cert.PublicKeyAlgorithm.String(),
+			SubjectKeyId:   fmt.Sprintf("%x", cert.SubjectKeyId),
+			AuthorityKeyId: fmt.Sprintf("%x", cert.AuthorityKeyId),
+			Policies:       cert.Policies,
+			KeyUsage:       cert.KeyUsage,
+			ExtKeyUsage:    cert.ExtKeyUsage,
+		})
+	}
+
+	ar := AcceptedRootCertificates{Certificates: roots}
+
+	return &ar, nil
 }
 
 func fetchServerCertificate(endpoint string) ([]*x509.Certificate, error) {

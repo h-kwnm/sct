@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/binary"
@@ -18,6 +19,34 @@ const (
 const (
 	extensionTypeLeafIndex uint8 = 0
 )
+
+// -- Accepted root certificates ---
+
+type GetRootsResponse struct {
+	Certificates []string `json:"certificates"`
+}
+
+type RootCertificate struct {
+	Raw            string             `json:"raw"`
+	ParseError     string             `json:"parse_error,omitempty"`
+	Version        int                `json:"version,omitempty"`
+	SerialNumber   string             `json:"serial,omitempty"`
+	SignatureAlg   string             `json:"sig_alg,omitempty"`
+	Issuer         string             `json:"issuer,omitempty"`
+	NotBefore      time.Time          `json:"not_before,omitempty"`
+	NotAfter       time.Time          `json:"not_after,omitempty"`
+	Subject        string             `json:"subject,omitempty"`
+	PublicKeyAlg   string             `json:"pubkey_alg,omitempty"`
+	SubjectKeyId   string             `json:"ski,omitempty"`
+	AuthorityKeyId string             `json:"aki,omitempty"`
+	Policies       []x509.OID         `json:"policies,omitempty"`
+	KeyUsage       x509.KeyUsage      `json:"key_usage,omitempty"`
+	ExtKeyUsage    []x509.ExtKeyUsage `json:"ext_key_usage,omitempty"`
+}
+
+type AcceptedRootCertificates struct {
+	Certificates []RootCertificate `json:"certificates"`
+}
 
 // --- CT log list ---
 

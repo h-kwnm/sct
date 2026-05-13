@@ -36,6 +36,9 @@ func main() {
 	case "audit-path":
 		runAuditPath(args[1:])
 		return
+	case "get-roots":
+		runGetRoots(args[1:])
+		return
 	case "version":
 		fmt.Println(version)
 		return
