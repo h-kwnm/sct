@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func fetchSth(log *CachedLog) (SignedTreeHead, error) {
+func fetchSTH(log *CachedLog) (SignedTreeHead, error) {
 	u := strings.TrimSuffix(log.URL, "/")
 	endpoint := fmt.Sprintf("%s/ct/v1/get-sth", u)
 
@@ -48,7 +48,7 @@ func fetchSth(log *CachedLog) (SignedTreeHead, error) {
 }
 
 func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
-	sth, err := fetchSth(log)
+	sth, err := fetchSTH(log)
 	if err != nil {
 		return RFC6962ProofResult{}, err
 	}
@@ -98,7 +98,7 @@ func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
 }
 
 func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResult, error) {
-	sth, err := fetchSth(log)
+	sth, err := fetchSTH(log)
 	if err != nil {
 		return GetEntriesResult{}, err
 	}

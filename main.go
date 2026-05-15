@@ -60,7 +60,7 @@ func main() {
 		return
 	// --- RFC 6962 ---
 	case "get-sth":
-		runGetSth(args[1:])
+		runGetSTH(args[1:])
 		return
 	case "get-entries":
 		runGetEntries(args[1:])

@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func runGetSth(args []string) {
+func runGetSTH(args []string) {
 	fs := flag.NewFlagSet("get-sth", flag.ExitOnError)
 	logID := fs.Int("log", 0, "log id (see 'sct logs --type rfc6962')")
 	fs.Parse(args)
@@ -18,7 +18,7 @@ func runGetSth(args []string) {
 		os.Exit(1)
 	}
 
-	sth, err := fetchSth(log)
+	sth, err := fetchSTH(log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to fetch signed tree head from %s: %v\n", log.URL, err)
 		os.Exit(1)
