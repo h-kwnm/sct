@@ -52,21 +52,10 @@ func httpGet(ctx context.Context, url string, limit int64) ([]byte, error) {
 }
 
 func fetchLogList() (*LogList, error) {
-	resp, err := httpClient.Get(logListURL)
+
+	body, err := httpGet(context.Background(), logListURL, 1<<20)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failure: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d, url: %s, body: %s", resp.StatusCode, logListURL, string(body))
+		return nil, fmt.Errorf("fetching %s: %w", logListURL, err)
 	}
 
 	var logList LogList
