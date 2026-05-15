@@ -31,7 +31,7 @@ The assigned **ID** is used by other commands to identify a log.
 
 ### `get-sct` - Extract SCT extension contents
 
-Extracts SCT extension contents from a PEM-formatted certificate file or a given URL endpoint and prints them as JSON.
+Extracts SCT extension contents from a PEM-formatted certificate file by `--pem` or a given URL endpoint by `--url` and prints them as JSON.
 When a certificate is specified by `--url` option, certificate verification can be skipped by `--insecure` option.
 
 ```sh
@@ -44,6 +44,9 @@ sct get-sct --url <url> [--insecure]
 Prints the audit path in JSON format.
 This path consists of Merkle Tree Nodes in the form of `{"start":m,"end":n}`, which corresponds to `MTH[m,n]`
 format used in [RFC 6962's notation](https://www.rfc-editor.org/rfc/rfc6962#section-2.1.1).
+
+This command only simulates an audit path calculated based on the specified parameters.
+No HTTP requests are made, thus no need to specify target log.
 
 ```sh
 sct audit-path --index <leaf-index> --size <tree-size>
@@ -80,7 +83,7 @@ sct data --log <id> --index <leaf-index> --out <dir>   # save to specific direct
 
 ### `audit` - Verify whether the leaf at the given index is included in the log
 
-Verifies whether the leaf at the given index is included in the log.
+Fetches the tiles required to verify the leaf certificate's inclusion and print the fetched data and verification result as JSON.
 The verification result is reported in the `verification_success` field of the JSON-formatted output.
 The output includes information on which tiles and hashes are used for the verification.
 
@@ -92,6 +95,9 @@ sct audit --log <id> --index <leaf-index>
 
 Prints the tiles in JSON format.
 The `tiles` field shows which tiles to fetch and which hash positions within each tile to use for proof verification.
+
+This command only simulates an audit tile to fetch, calculated based on the specified parameters.
+No HTTP requests are made, thus no need to specify target log.
 
 ```sh
 sct audit-tile --index <leaf-index> --size <tree-size>
@@ -116,11 +122,11 @@ Fetches audit paths related to SCTs included in the given certificate.
 The certificate is passed by either `--pem` or `--url` option. When passed by `--pem`,
 the leaf certificate's issuer certificate must also be passed by `--iss` option.
 When `--url` option is specified, both leaf and issuer certificates are automatically fetched from the endpoint.
-Certificate verification can be skipped by `--insecure` option.
+When a certificate is specified by `--url` option, certificate verification can be skipped by `--insecure` option.
 
-The verification result is reported in the `verification_success` field of the JSON-formatted output.
-Object under `audit_proof` is bare response against get-proof-by-hash API. Target endpoints for get-proof-by-hash are
-automatically identified from log IDs in SCTs.
+The verification result of the audit proof is reported in the `verification_success` field of the JSON-formatted output.
+The `audit_proof` field contains the raw response from the CT log's get-proof-by-hash endpoint.
+Target endpoints for get-proof-by-hash are automatically identified from log IDs in SCTs.
 
 ```sh
 sct get-proof-by-hash --pem <leaf-cert-pem-file> --iss <issuer-cert-pem-file>
@@ -131,15 +137,29 @@ sct get-proof-by-hash --url <url> [--insecure]
 
 | Flag | Description |
 |------|-------------|
-| `--debug` | Enable debug logging (output to stderr) |
+| `--debug` | Enable debug logging (output to stderr). |
+| `--insecure` | Only used in combination with `--url`. Skip TLS certificate verification of the server at the URL. |
 
 ```sh
-sct --debug data --log <id> --index <leaf-index>
+sct --debug data --log 10 --index 1234567
+```
+
+```sh
+sct get-sct --url https://example.com --insecure
 ```
 
 ## Cache
 
+### Log
+
+Log list is fetched and cached by first invocation of `sct logs` command.
 The log list is cached at `~/.cache/sct/logs.json`. Run `sct logs --refresh` to update it.
+
+### Tile
+
+Tiles fetched during `audit` command invocation are cached in `sct` directory
+under the system's cache directory, e.g., `/tmp/sct`. So, be noted that the cache is deleted after reboots.
+The cache file name is first 12 hex characters of a hash value, derived from the tiles' respective URL.
 
 ## License
 
