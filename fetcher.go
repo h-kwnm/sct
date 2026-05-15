@@ -160,6 +160,7 @@ func fetchServerCertificate(endpoint string, insecure bool) ([]*x509.Certificate
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to %s: %w", endpoint, err)
 	}
+	defer conn.Close()
 
 	certs := conn.ConnectionState().PeerCertificates
 
