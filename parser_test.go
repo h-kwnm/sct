@@ -292,7 +292,7 @@ func TestTrimSCTExtension(t *testing.T) {
 		t.Fatalf("trimSCTExtension: %v", err)
 	}
 
-	var tbs TbsCertificate
+	var tbs TBSCertificate
 	if _, err := asn1.Unmarshal(trimmed, &tbs); err != nil {
 		t.Fatalf("re-parse TBS: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestTrimSCTExtensionNoSCT(t *testing.T) {
 		t.Fatalf("trimSCTExtension: %v", err)
 	}
 
-	var tbs TbsCertificate
+	var tbs TBSCertificate
 	if _, err := asn1.Unmarshal(trimmed, &tbs); err != nil {
 		t.Fatalf("re-parse TBS: %v", err)
 	}

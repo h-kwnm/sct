@@ -367,7 +367,7 @@ type RFC6962ProofResult struct {
 	Proof               RFC6962Proof `json:"audit_proof"`
 }
 
-type TbsCertificate struct {
+type TBSCertificate struct {
 	Version              asn1.RawValue `asn1:"optional,explicit,tag:0"`
 	SerialNumber         asn1.RawValue
 	SignatureAlgorithm   asn1.RawValue
@@ -378,7 +378,7 @@ type TbsCertificate struct {
 	Extensions           []pkix.Extension `asn1:"optional,explicit,tag:3"`
 }
 
-func (t TbsCertificate) MarshalJSON() ([]byte, error) {
+func (t TBSCertificate) MarshalJSON() ([]byte, error) {
 	var version int
 	if _, err := asn1.Unmarshal(t.Version.Bytes, &version); err != nil {
 		return nil, err
@@ -513,14 +513,14 @@ func (pc Precert) MarshalJSON() ([]byte, error) {
 	}
 
 	isk := fmt.Sprintf("%x", pc.IssuerKeyHash)
-	var tbs TbsCertificate
+	var tbs TBSCertificate
 	_, err := asn1.Unmarshal(pc.RawTBSCertificate, &tbs)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(struct {
 		IssuerKeyHash     string         `json:"issuer_key_hash"`
-		RawTBSCertificate TbsCertificate `json:"tbs_certificate"`
+		RawTBSCertificate TBSCertificate `json:"tbs_certificate"`
 	}{
 		IssuerKeyHash:     isk,
 		RawTBSCertificate: tbs,

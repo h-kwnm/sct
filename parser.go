@@ -359,9 +359,9 @@ func parseSignedNotes(lines []string, origin string) ([]SignedNote, error) {
 
 // x.509 cert sct extensions
 
-func trimSCTExtension(rawTbs []byte) ([]byte, error) {
-	var tbs TbsCertificate
-	if _, err := asn1.Unmarshal(rawTbs, &tbs); err != nil {
+func trimSCTExtension(rawTBS []byte) ([]byte, error) {
+	var tbs TBSCertificate
+	if _, err := asn1.Unmarshal(rawTBS, &tbs); err != nil {
 		return nil, err
 	}
 
@@ -505,7 +505,7 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 	// - tbs
 	tbs, err := trimSCTExtension(cert.RawTBSCertificate)
 	if err != nil {
-		return []MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TbsCertificate: %w", err)
+		return []MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TBSCertificate: %w", err)
 	}
 	isk := sha256.Sum256(issCert.RawSubjectPublicKeyInfo)
 	precert := Precert{RawTBSCertificate: tbs, IssuerKeyHash: isk}
