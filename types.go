@@ -423,7 +423,7 @@ func (t TBSCertificate) MarshalJSON() ([]byte, error) {
 
 	type ext struct {
 		OID      string `json:"oid"`
-		Critical bool   `json:"critial"`
+		Critical bool   `json:"critical"`
 		Value    string `json:"value"`
 	}
 	var exts []ext
