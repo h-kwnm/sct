@@ -24,8 +24,7 @@ func getAuditPath(leafIndex, treeSize uint64) AuditPath {
 	m := leafIndex
 	n := treeSize
 	nodes := []HashRange{}
-	var lo uint64 = 0
-	var hi uint64 = n
+	var lo, hi uint64
 
 	for hi-lo > 1 {
 		var k uint64 = 1 << (bits.Len64(hi-lo-1) - 1)
@@ -73,7 +72,7 @@ func formatTileString(index uint64, partialIndex uint64) (string, error) {
 func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 	tileIndex := leafIndex / tileWidth
 	maxTileIndex := (treeSize - 1) / tileWidth
-	var partialIndex uint64 = 0
+	var partialIndex uint64
 	if tileIndex == maxTileIndex {
 		partialIndex = treeSize % tileWidth
 	}
