@@ -135,7 +135,7 @@ func fetchAcceptedRootCertificate(log *CachedLog) (*AcceptedRootCertificates, er
 	return &ar, nil
 }
 
-func fetchServerCertificate(endpoint string) ([]*x509.Certificate, error) {
+func fetchServerCertificate(endpoint string, insecure bool) ([]*x509.Certificate, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid endpoint URL %s: %w", endpoint, err)
@@ -148,7 +148,7 @@ func fetchServerCertificate(endpoint string) ([]*x509.Certificate, error) {
 	}
 
 	conn, err := tls.Dial("tcp", address, &tls.Config{
-		InsecureSkipVerify: true, // no verification since the result do not matter here
+		InsecureSkipVerify: insecure,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to %s: %w", endpoint, err)

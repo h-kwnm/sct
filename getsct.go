@@ -12,6 +12,7 @@ func runGetSCT(args []string) {
 	fs := flag.NewFlagSet("get-sct", flag.ExitOnError)
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
 	url := fs.String("url", "", "URL to fetch server certificate")
+	insecure := fs.Bool("insecure", false, "skip verification of the endpoint's server certificate")
 	fs.Parse(args)
 
 	if *pemFile == "" && *url == "" {
@@ -28,7 +29,7 @@ func runGetSCT(args []string) {
 			os.Exit(1)
 		}
 	} else { // --url <url>
-		chain, err := fetchServerCertificate(*url)
+		chain, err := fetchServerCertificate(*url, *insecure)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to fetch server certificate from %s: %v\n", *url, err)
 			os.Exit(1)

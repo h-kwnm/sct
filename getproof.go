@@ -15,6 +15,7 @@ func runGetProofByHash(args []string) {
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
 	issFile := fs.String("iss", "", "PEM-formatted issuer certificate")
 	url := fs.String("url", "", "URL to fetch server certificate")
+	insecure := fs.Bool("insecure", false, "skip verification of the endpoint's server certificate")
 	fs.Parse(args)
 
 	if *url == "" && (*pemFile == "" || *issFile == "") {
@@ -25,7 +26,7 @@ func runGetProofByHash(args []string) {
 	var cert, issCert *x509.Certificate
 	var err error
 	if *url != "" {
-		chain, err := fetchServerCertificate(*url)
+		chain, err := fetchServerCertificate(*url, *insecure)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to fetch certificates from %s: %v\n", *url, err)
 			os.Exit(1)
