@@ -97,7 +97,7 @@ func TestPrecertMarshal(t *testing.T) {
 	}
 	tbs := []byte{0x30, 0x05, 0x02, 0x03, 0x01, 0x02, 0x03}
 
-	got := Precert{IssuerKeyHash: isk, RawTbsCertificate: tbs}.Marshal()
+	got := Precert{IssuerKeyHash: isk, RawTBSCertificate: tbs}.Marshal()
 
 	wantLen := 32 + 3 + len(tbs)
 	if len(got) != wantLen {
@@ -126,7 +126,7 @@ func TestTimestampedEntryMarshal(t *testing.T) {
 	entry := TimestampedEntry{
 		Timestamp:    ts,
 		LogEntryType: entryTypePrecert,
-		Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTbsCertificate: tbs},
+		Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTBSCertificate: tbs},
 		CtExtensions: 0x0000,
 	}
 
@@ -167,7 +167,7 @@ func TestMerkleTreeLeafMarshal(t *testing.T) {
 		TimestampedEntry: TimestampedEntry{
 			Timestamp:    CTTimestamp(1_700_000_000_000),
 			LogEntryType: entryTypePrecert,
-			Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTbsCertificate: []byte{0xBB}},
+			Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTBSCertificate: []byte{0xBB}},
 			CtExtensions: 0x0000,
 		},
 	}

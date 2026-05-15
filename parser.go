@@ -18,6 +18,19 @@ const maxCertSize = 1 << 20 // 1MB
 
 const maxCtExtSize = 1 << 10
 
+var (
+	oidExtensionSubjectKeyId          = asn1.ObjectIdentifier{2, 5, 29, 14}
+	oidExtensionKeyUsage              = asn1.ObjectIdentifier{2, 5, 29, 15}
+	oidExtensionSubjectAltName        = asn1.ObjectIdentifier{2, 5, 29, 17}
+	oidExtensionBasicConstraints      = asn1.ObjectIdentifier{2, 5, 29, 19}
+	oidExtensionCRLDistributionPoints = asn1.ObjectIdentifier{2, 5, 23, 31}
+	oidExtensionCertificatePolicies   = asn1.ObjectIdentifier{2, 5, 23, 32}
+	oidExtensionAuthorityKeyId        = asn1.ObjectIdentifier{2, 5, 29, 35}
+	oidExtensionExtendedKeyUsage      = asn1.ObjectIdentifier{2, 5, 29, 37}
+	oidExtensionAuthorityInfoAccess   = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 1}
+	oidExtensionSCTList               = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
+)
+
 func readUint24(r io.Reader) (uint32, error) {
 	var b [3]byte
 	if _, err := io.ReadFull(r, b[:]); err != nil {
@@ -354,7 +367,7 @@ func trimSCTExtension(rawTbs []byte) ([]byte, error) {
 
 	filtered := tbs.Extensions[:0]
 	for _, ext := range tbs.Extensions {
-		if !ext.Id.Equal(oidSCTList) {
+		if !ext.Id.Equal(oidExtensionSCTList) {
 			filtered = append(filtered, ext)
 		}
 	}
@@ -362,8 +375,6 @@ func trimSCTExtension(rawTbs []byte) ([]byte, error) {
 
 	return asn1.Marshal(tbs)
 }
-
-var oidSCTList = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
 
 func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 	var sctListBytes []byte
@@ -395,7 +406,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 		//	       CtExtensions extensions;
 		//	    };
 		//	} SignedCertificateTimestamp;
-		if ext.Id.Equal(oidSCTList) {
+		if ext.Id.Equal(oidExtensionSCTList) {
 			_, err := asn1.Unmarshal(ext.Value, &sctListBytes)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse SCT extension value: %w", err)
@@ -497,7 +508,7 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 		return []MerkleTreeLeaf{}, nil, fmt.Errorf("failed to trim SCT extension from TbsCertificate: %w", err)
 	}
 	isk := sha256.Sum256(issCert.RawSubjectPublicKeyInfo)
-	precert := Precert{RawTbsCertificate: tbs, IssuerKeyHash: isk}
+	precert := Precert{RawTBSCertificate: tbs, IssuerKeyHash: isk}
 
 	// build TimestampedEntry
 	// - timestamp (8 bytes)
@@ -608,4 +619,90 @@ func parseExtKeyUsage(eku []x509.ExtKeyUsage) []string {
 	}
 
 	return usages
+}
+
+func parseTimestampedEntryRFC6962(r *bytes.Reader) (TimestampedEntry, error) {
+	var tsEntry TimestampedEntry
+
+	var timestamp uint64
+	if err := binary.Read(r, binary.BigEndian, &timestamp); err != nil {
+		return TimestampedEntry{}, err
+	}
+	tsEntry.Timestamp = CTTimestamp(timestamp)
+
+	var entryType uint16
+	if err := binary.Read(r, binary.BigEndian, &entryType); err != nil {
+		return TimestampedEntry{}, err
+	}
+	tsEntry.LogEntryType = entryType
+
+	switch entryType {
+	case entryTypeX509:
+		asn1CertLen, err := readUint24(r)
+		if err != nil {
+			return TimestampedEntry{}, err
+		}
+		asn1CertData := make([]byte, asn1CertLen)
+		_, err = io.ReadFull(r, asn1CertData)
+		if err != nil {
+			return TimestampedEntry{}, err
+		}
+		cert, err := x509.ParseCertificate(asn1CertData)
+		if err != nil {
+			return TimestampedEntry{}, fmt.Errorf("parsing ANS.1Cert: %w", err)
+		}
+		tsEntry.ASN1Cert = ASN1Cert(*cert)
+	case entryTypePrecert:
+		var precert Precert
+		var isk [32]byte
+		if err := binary.Read(r, binary.BigEndian, &isk); err != nil {
+			return TimestampedEntry{}, err
+		}
+		precert.IssuerKeyHash = isk
+
+		_, err := readUint24(r) // skip 3 bytes of TBSCertificate length header
+		if err != nil {
+			return TimestampedEntry{}, err
+		}
+
+		tbsData, err := io.ReadAll(r)
+		if err != nil {
+			return TimestampedEntry{}, err
+		}
+		precert.RawTBSCertificate = tbsData
+
+		tsEntry.Precert = precert
+	}
+
+	return tsEntry, nil
+}
+
+func parseMerkleTreeLeaf(r *bytes.Reader) (MerkleTreeLeaf, error) {
+	var mkl MerkleTreeLeaf
+	var version, leafType uint8
+	err := binary.Read(r, binary.BigEndian, &version)
+	if err != nil {
+		return MerkleTreeLeaf{}, err
+	}
+	err = binary.Read(r, binary.BigEndian, &leafType)
+	if err != nil {
+		return MerkleTreeLeaf{}, err
+	}
+	mkl.Version = version
+	mkl.MerkleLeafType = leafType
+
+	tsData, err := io.ReadAll(r)
+	if err != nil {
+		return MerkleTreeLeaf{}, err
+	}
+
+	tsReader := bytes.NewReader(tsData)
+	tsEntry, err := parseTimestampedEntryRFC6962(tsReader)
+	if err != nil {
+		return MerkleTreeLeaf{}, fmt.Errorf("parsing RFC 6962 TimestampedEntry: %w", err)
+	}
+
+	mkl.TimestampedEntry = tsEntry
+
+	return mkl, nil
 }

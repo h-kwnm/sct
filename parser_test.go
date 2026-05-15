@@ -297,7 +297,7 @@ func TestTrimSCTExtension(t *testing.T) {
 		t.Fatalf("re-parse TBS: %v", err)
 	}
 	for _, ext := range tbs.Extensions {
-		if ext.Id.Equal(oidSCTList) {
+		if ext.Id.Equal(oidExtensionSCTList) {
 			t.Error("SCT extension still present after trimming")
 		}
 	}
@@ -324,7 +324,7 @@ func TestTrimSCTExtensionNoSCT(t *testing.T) {
 		t.Fatalf("re-parse TBS: %v", err)
 	}
 	for _, ext := range tbs.Extensions {
-		if ext.Id.Equal(oidSCTList) {
+		if ext.Id.Equal(oidExtensionSCTList) {
 			t.Error("SCT extension found in cert that had none")
 		}
 	}

@@ -5,9 +5,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 )
 
@@ -376,9 +378,111 @@ type TbsCertificate struct {
 	Extensions           []pkix.Extension `asn1:"optional,explicit,tag:3"`
 }
 
+func (t TbsCertificate) MarshalJSON() ([]byte, error) {
+	var version int
+	if _, err := asn1.Unmarshal(t.Version.Bytes, &version); err != nil {
+		return nil, err
+	}
+
+	serialNumber := new(big.Int).SetBytes(t.SerialNumber.Bytes)
+
+	var sigAlg pkix.AlgorithmIdentifier
+	if _, err := asn1.Unmarshal(t.SignatureAlgorithm.FullBytes, &sigAlg); err != nil {
+		return nil, err
+	}
+
+	var issuer pkix.RDNSequence
+	if _, err := asn1.Unmarshal(t.Issuer.FullBytes, &issuer); err != nil {
+		return nil, err
+	}
+
+	var validity struct {
+		NotBefore time.Time
+		NotAfter  time.Time
+	}
+	if _, err := asn1.Unmarshal(t.Validity.FullBytes, &validity); err != nil {
+		return nil, err
+	}
+
+	var subject pkix.RDNSequence
+	if _, err := asn1.Unmarshal(t.Subject.FullBytes, &subject); err != nil {
+		return nil, err
+	}
+
+	var spki struct {
+		Algorithm pkix.AlgorithmIdentifier
+		PublicKey asn1.BitString
+	}
+	if _, err := asn1.Unmarshal(t.SubjectPublicKeyInfo.FullBytes, &spki); err != nil {
+		return nil, err
+	}
+
+	type ext struct {
+		OID      string `json:"oid"`
+		Critical bool   `json:"critial"`
+		Value    string `json:"value"`
+	}
+	var exts []ext
+	for _, ex := range t.Extensions {
+		exts = append(exts, ext{
+			OID:      ex.Id.String(),
+			Critical: ex.Critical,
+			Value:    base64.StdEncoding.EncodeToString(ex.Value),
+		})
+	}
+	// TODO: parse in detail
+	// for _, ext := range t.Extensions {
+	// 	switch {
+	// 	case ext.Id.Equal(oidExtensionSubjectAltName):
+	// 		var names []asn1.RawValue
+	// 		asn1.Unmarshal(ext.Value, &names)
+	// 	case ext.Id.Equal(oidExtensionBasicConstraints):
+	// 		var bc struct {
+	// 			IsCA       bool `asn1:"optional"`
+	// 			MaxPathLen int  `asn1:"optional,default:-1"`
+	// 		}
+	// 		asn1.Unmarshal(ext.Value, &bc)
+	// 	case ext.Id.Equal(oidExtensionKeyUsage):
+	// 		var usage asn1.BitString
+	// 		asn1.Unmarshal(ext.Value, &usage)
+	// 	}
+	// }
+
+	return json.Marshal(struct {
+		Version              string    `json:"version"`
+		SerialNumber         string    `json:"serial_number"`
+		SignatureAlgorithm   string    `json:"signature_algorithm"`
+		Issuer               string    `json:"issuer"`
+		NotBefore            time.Time `json:"not_before"`
+		NotAfter             time.Time `json:"not_after"`
+		Subject              string    `json:"subject"`
+		SubjectPublicKeyInfo struct {
+			AlgorithmIdentifier string `json:"algorithm_identifier"`
+			PublicKey           string `json:"public_key"`
+		} `json:"subject_public_key_info"`
+		Extensions []ext
+	}{
+		Version:            fmt.Sprintf("0x%02x", version),
+		SerialNumber:       fmt.Sprintf("%x", serialNumber),
+		SignatureAlgorithm: sigAlg.Algorithm.String(),
+		Issuer:             issuer.String(),
+		NotBefore:          validity.NotBefore,
+		NotAfter:           validity.NotAfter,
+		Subject:            subject.String(),
+		SubjectPublicKeyInfo: struct {
+			AlgorithmIdentifier string `json:"algorithm_identifier"`
+			PublicKey           string `json:"public_key"`
+		}{
+			AlgorithmIdentifier: spki.Algorithm.Algorithm.String(),
+			PublicKey:           base64.StdEncoding.EncodeToString(spki.PublicKey.Bytes),
+		},
+		Extensions: exts,
+	})
+}
+
 type Precert struct {
-	IssuerKeyHash     [32]byte
-	RawTbsCertificate []byte
+	IssuerKeyHash     [32]byte `json:"issuer_key_hash"`
+	RawTBSCertificate []byte   `json:"tbs_certificate"`
 }
 
 func (p Precert) Marshal() []byte {
@@ -387,20 +491,89 @@ func (p Precert) Marshal() []byte {
 
 	// TBSCertificate has 3 bytes length header as defined below.
 	// opaque TBSCertificate<1..2^24-1>
-	length := len(p.RawTbsCertificate)
+	length := len(p.RawTBSCertificate)
 	b.WriteByte(byte(length >> 16))
 	b.WriteByte(byte(length >> 8))
 	b.WriteByte(byte(length))
-	b.Write(p.RawTbsCertificate)
+	b.Write(p.RawTBSCertificate)
 
 	return b.Bytes()
 }
 
+func (pc Precert) MarshalJSON() ([]byte, error) {
+	var zeroHash [32]byte
+	if pc.IssuerKeyHash == zeroHash {
+		return json.Marshal(struct {
+			IssuerKeyHash     string `json:"issuer_key_hash"`
+			RawTBSCertificate string `json:"tbs_certificate"`
+		}{
+			IssuerKeyHash:     "",
+			RawTBSCertificate: "",
+		})
+	}
+
+	isk := fmt.Sprintf("%x", pc.IssuerKeyHash)
+	var tbs TbsCertificate
+	_, err := asn1.Unmarshal(pc.RawTBSCertificate, &tbs)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		IssuerKeyHash     string         `json:"issuer_key_hash"`
+		RawTBSCertificate TbsCertificate `json:"tbs_certificate"`
+	}{
+		IssuerKeyHash:     isk,
+		RawTBSCertificate: tbs,
+	})
+}
+
+type LeafCertificate struct {
+	// Raw            string     `json:"raw"`
+	Version        int        `json:"version,omitempty"`
+	SerialNumber   string     `json:"serial,omitempty"`
+	SignatureAlg   string     `json:"sig_alg,omitempty"`
+	Issuer         string     `json:"issuer,omitempty"`
+	NotBefore      time.Time  `json:"not_before"`
+	NotAfter       time.Time  `json:"not_after"`
+	Subject        string     `json:"subject,omitempty"`
+	PublicKeyAlg   string     `json:"pubkey_alg,omitempty"`
+	DNSNames       []string   `json:"dns_names,omitempty"`
+	IPAddresses    []string   `json:"ip_addresses,omitempty"`
+	SubjectKeyId   string     `json:"ski,omitempty"`
+	AuthorityKeyId string     `json:"aki,omitempty"`
+	Policies       []x509.OID `json:"policies,omitempty"`
+	KeyUsage       []string   `json:"key_usage,omitempty"`
+	ExtKeyUsage    []string   `json:"ext_key_usage,omitempty"`
+}
+
+type ASN1Cert x509.Certificate
+
+func (ac ASN1Cert) MarshalJSON() ([]byte, error) {
+	leafCert := LeafCertificate{
+		Version:        ac.Version,
+		SerialNumber:   fmt.Sprintf("%x", ac.SerialNumber),
+		SignatureAlg:   ac.SignatureAlgorithm.String(),
+		Issuer:         ac.Issuer.String(),
+		NotBefore:      ac.NotBefore,
+		NotAfter:       ac.NotAfter,
+		Subject:        ac.Subject.String(),
+		PublicKeyAlg:   ac.PublicKeyAlgorithm.String(),
+		SubjectKeyId:   fmt.Sprintf("%x", ac.SubjectKeyId),
+		AuthorityKeyId: fmt.Sprintf("%x", ac.AuthorityKeyId),
+		Policies:       ac.Policies,
+		KeyUsage:       parseKeyUsage(ac.KeyUsage),
+		ExtKeyUsage:    parseExtKeyUsage(ac.ExtKeyUsage),
+	}
+
+	return json.Marshal(leafCert)
+}
+
 type TimestampedEntry struct {
-	Timestamp    CTTimestamp
-	LogEntryType uint16  // for now, only precert_entry(1) type
-	Precert      Precert // for now, only precert type
-	CtExtensions uint16  // only for RFC 6962, so always "0x0000"
+	Timestamp    CTTimestamp `json:"timestamp"`
+	LogEntryType uint16      `json:"entry_type"`
+	ASN1Cert     ASN1Cert    `json:"asn1cert"`      // LogEntryType = 0(x509_entry)
+	Precert      Precert     `json:"precert"`       // LogEntryType = 1(precert_entry)
+	CtExtensions uint16      `json:"ct_extensions"` // this types is only for RFC 6962, so always "0x0000"
 }
 
 func (t TimestampedEntry) Marshal() []byte {
@@ -410,6 +583,39 @@ func (t TimestampedEntry) Marshal() []byte {
 	b.Write(t.Precert.Marshal())
 	binary.Write(&b, binary.BigEndian, t.CtExtensions)
 	return b.Bytes()
+}
+
+func (t TimestampedEntry) MarshalJSON() ([]byte, error) {
+	switch t.LogEntryType {
+	case entryTypeX509:
+		tsX509 := struct {
+			Timestamp    CTTimestamp `json:"timestamp"`
+			LogEntryType uint16      `json:"entry_type"`
+			ASN1Cert     ASN1Cert    `json:"asn1cert"`
+			CtExtensions uint16      `json:"ct_extensions"`
+		}{
+			Timestamp:    t.Timestamp,
+			LogEntryType: t.LogEntryType,
+			ASN1Cert:     t.ASN1Cert,
+			CtExtensions: t.CtExtensions,
+		}
+		return json.Marshal(tsX509)
+	case entryTypePrecert:
+		tsPrecert := struct {
+			Timestamp    CTTimestamp `json:"timestamp"`
+			LogEntryType uint16      `json:"entry_type"`
+			Precert      Precert     `json:"precert"`
+			CtExtensions uint16      `json:"ct_extensions"`
+		}{
+			Timestamp:    t.Timestamp,
+			LogEntryType: t.LogEntryType,
+			Precert:      t.Precert,
+			CtExtensions: t.CtExtensions,
+		}
+		return json.Marshal(tsPrecert)
+	}
+
+	return nil, fmt.Errorf("unexpected log entry type=%d", t.LogEntryType)
 }
 
 type MerkleTreeLeaf struct {
@@ -428,7 +634,16 @@ func (l MerkleTreeLeaf) Marshal() []byte {
 
 type GetEntriesResponse struct {
 	Entries []struct {
-		LeafInput string `json:"leaf_input"`
-		ExtraData string `json:"extra_data"`
+		LeafInput []byte `json:"leaf_input"`
+		ExtraData []byte `json:"extra_data"`
 	} `json:"entries"`
+}
+
+type GetEntriesResult struct {
+	Log     *CachedLog
+	Entries []struct {
+		LeafIndex uint64         `json:"leaf_index"`
+		LeafInput MerkleTreeLeaf `json:"leaf_input"`
+		// TODO: extra_data
+	}
 }

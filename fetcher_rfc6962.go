@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -96,13 +97,13 @@ func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
 	}, nil
 }
 
-func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResponse, error) {
+func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResult, error) {
 	sth, err := fetchSth(log)
 	if err != nil {
-		return GetEntriesResponse{}, err
+		return GetEntriesResult{}, err
 	}
 	if index+offset >= sth.TreeSize {
-		return GetEntriesResponse{}, fmt.Errorf("invalid index/offset(index+offset=%d must be less than tree size=%d)", index+offset, sth.TreeSize)
+		return GetEntriesResult{}, fmt.Errorf("invalid index/offset(index+offset=%d must be less than tree size=%d)", index+offset, sth.TreeSize)
 	}
 
 	u := strings.TrimSuffix(log.URL, "/")
@@ -113,30 +114,46 @@ func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResponse, err
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
 	if err != nil {
-		return GetEntriesResponse{}, err
+		return GetEntriesResult{}, err
 	}
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return GetEntriesResponse{}, err
+		return GetEntriesResult{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return GetEntriesResponse{}, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
+		return GetEntriesResult{}, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
 	if err != nil {
-		return GetEntriesResponse{}, err
+		return GetEntriesResult{}, err
 	}
 
 	var entries GetEntriesResponse
 	if err := json.Unmarshal(body, &entries); err != nil {
-		return GetEntriesResponse{}, err
+		return GetEntriesResult{}, err
 	}
 
-	return entries, nil
+	var result GetEntriesResult
+	result.Log = log
+	for i, entry := range entries.Entries {
+		r := bytes.NewReader(entry.LeafInput)
+		mkl, err := parseMerkleTreeLeaf(r)
+		if err != nil {
+			return GetEntriesResult{}, err
+		}
+		result.Entries = append(result.Entries, struct {
+			LeafIndex uint64         "json:\"leaf_index\""
+			LeafInput MerkleTreeLeaf "json:\"leaf_input\""
+		}{
+			LeafIndex: index + uint64(i),
+			LeafInput: mkl,
+		})
+	}
+	return result, nil
 
 }
