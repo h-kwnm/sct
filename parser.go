@@ -649,7 +649,7 @@ func parseTimestampedEntryRFC6962(r *bytes.Reader) (TimestampedEntry, error) {
 		}
 		cert, err := x509.ParseCertificate(asn1CertData)
 		if err != nil {
-			return TimestampedEntry{}, fmt.Errorf("parsing ANS.1Cert: %w", err)
+			return TimestampedEntry{}, fmt.Errorf("parsing ASN.1Cert: %w", err)
 		}
 		tsEntry.ASN1Cert = ASN1Cert(*cert)
 	case entryTypePrecert:
