@@ -29,6 +29,28 @@ var logListURL = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 //	sct/0.1 (github.com/h-kwnm/sct)
 const userAgent = "sct/" + version + " (github.com/h-kwnm/sct)"
 
+func httpGet(ctx context.Context, url string, limit int64) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, limit))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d from %s: %s", resp.StatusCode, url, body)
+	}
+	return body, nil
+}
+
 func fetchLogList() (*LogList, error) {
 	resp, err := httpClient.Get(logListURL)
 	if err != nil {
@@ -68,24 +90,9 @@ func fetchAcceptedRootCertificate(log *CachedLog) (*AcceptedRootCertificates, er
 	u = strings.TrimSuffix(u, "/")
 	endpoint := fmt.Sprintf("%s/ct/v1/get-roots", u)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint, nil)
+	body, err := httpGet(context.Background(), endpoint, 1<<24)
 	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP request to %s failed: %w", endpoint, err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body url=%s: %w", endpoint, err)
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("unexpected response status code %d: %s", resp.StatusCode, endpoint)
+		return nil, fmt.Errorf("fetching from %s: %w", endpoint, err)
 	}
 
 	var res GetRootsResponse

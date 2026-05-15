@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,26 +16,9 @@ func fetchCheckpoint(log *CachedLog) (Checkpoint, error) {
 
 	slog.Debug("fetchCheckpoint", "url", checkpointEndpoint)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", checkpointEndpoint, nil)
+	body, err := httpGet(context.Background(), checkpointEndpoint, 64<<10)
 	if err != nil {
-		return Checkpoint{}, err
-	}
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return Checkpoint{}, fmt.Errorf("HTTP request failure: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-	if err != nil {
-		return Checkpoint{}, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return Checkpoint{}, fmt.Errorf("unexpected status code: %d, url: %s, body: %s", resp.StatusCode, checkpointEndpoint, string(body))
+		return Checkpoint{}, fmt.Errorf("fetching from %s: %w", checkpointEndpoint, err)
 	}
 
 	parts := strings.Split(string(body), "\n")
@@ -88,26 +69,9 @@ func fetchDataTile(leafIndex uint64, log *CachedLog) ([]byte, string, error) {
 	dataTileEndpoint := fmt.Sprintf("%stile/data/%s", log.MonitoringURL, tileIndexPath)
 	slog.Debug("fetchDataTile", "url", dataTileEndpoint)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", dataTileEndpoint, nil)
+	body, err := httpGet(context.Background(), dataTileEndpoint, 10<<20) // 10MB max
 	if err != nil {
-		return nil, "", err
-	}
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, "", fmt.Errorf("HTTP request failure: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10MB max
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, "", fmt.Errorf("unexpected status code: %d, url: %s, body: %s", resp.StatusCode, dataTileEndpoint, string(body))
+		return nil, "", fmt.Errorf("fetching from %s: %w", dataTileEndpoint, err)
 	}
 
 	return body, tileIndexPath, nil
@@ -122,25 +86,9 @@ func fetchTile(url string) ([]byte, error) {
 		return cache, nil
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+	body, err := httpGet(context.Background(), url, 16<<10)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a request: %s, %w", url, err)
-	}
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch a tile: %s, %w", url, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("unexpected response status code: %s, %d", url, resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 16<<10))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read HTTP response body: %s, %w", url, err)
+		return nil, fmt.Errorf("fetching from %s: %w", url, err)
 	}
 
 	// intentionally cache partial tiles although it is not recommended.
