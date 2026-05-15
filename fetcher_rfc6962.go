@@ -23,7 +23,7 @@ func fetchSTH(log *CachedLog) (SignedTreeHead, error) {
 	var data SignedTreeHead
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		return SignedTreeHead{}, err
+		return SignedTreeHead{}, fmt.Errorf("unmarshalling STH of log %s: %w", endpoint, err)
 	}
 
 	return data, nil
