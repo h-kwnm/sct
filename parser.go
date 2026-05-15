@@ -434,7 +434,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 					return nil, fmt.Errorf("failed to read SCT extension length: %w", err)
 				}
 
-				var sctData = make([]byte, sctLen)
+				sctData := make([]byte, sctLen)
 				_, err := io.ReadFull(sctReader, sctData[:])
 				if err != nil {
 					return nil, fmt.Errorf("failed to read SCT extension data: %w", err)
