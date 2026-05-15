@@ -93,7 +93,9 @@ func fetchTile(url string) ([]byte, error) {
 
 	// intentionally cache partial tiles although it is not recommended.
 	// partial tiles are not used since relevant tiles are identified during each invocations.
-	saveTileCache(url, body)
+	if err := saveTileCache(url, body); err != nil {
+		return nil, fmt.Errorf("saving cache of fetched tile %s: %w", url, err)
+	}
 
 	return body, nil
 }
