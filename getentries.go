@@ -16,7 +16,7 @@ func runGetEntries(args []string) {
 
 	log, err := logByID(*logID, APITypeRFC6962)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "no log found with ID=%d, type=%s\n", *logID, APITypeRFC6962)
+		fmt.Fprintf(os.Stderr, "no log found with ID=%d, type=%s: %v\n", *logID, APITypeRFC6962, err)
 		os.Exit(1)
 	}
 	entries, err := fetchEntries(*index, *offset, log)
