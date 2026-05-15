@@ -18,7 +18,7 @@ func temporaryFilePath(url string) (string, error) {
 	}
 
 	h := sha256.Sum256([]byte(url))
-	fname := fmt.Sprintf("%x.tile", h[:4])
+	fname := fmt.Sprintf("%x.tile", h[:12])
 
 	return filepath.Join(dir, fname), nil
 }
