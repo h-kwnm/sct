@@ -287,7 +287,7 @@ func verifyInclusionRFC6962(pr *RFC6962ProofResult) error {
 	}
 
 	if sn != 0 {
-		return fmt.Errorf("verification failed, unexpected sn!=1")
+		return fmt.Errorf("verification failed, unexpected sn!=0")
 	}
 
 	h := base64.StdEncoding.EncodeToString(current[:])
