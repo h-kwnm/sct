@@ -54,6 +54,7 @@ func runData(args []string) {
 	}
 	if !found {
 		fmt.Fprintf(os.Stderr, "leaf index %d not found in tile. note that the latest leaf index is (treeSize - 1) since tree size is 1-based and leaf index is 0-based\n", *index)
+		os.Exit(1)
 	}
 
 	if *outpath != "" {
