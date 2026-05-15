@@ -24,7 +24,8 @@ func getAuditPath(leafIndex, treeSize uint64) AuditPath {
 	m := leafIndex
 	n := treeSize
 	nodes := []HashRange{}
-	var lo, hi uint64
+	var lo uint64
+	var hi uint64 = n
 
 	for hi-lo > 1 {
 		var k uint64 = 1 << (bits.Len64(hi-lo-1) - 1)
