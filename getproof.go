@@ -19,7 +19,7 @@ func runGetProofByHash(args []string) {
 	fs.Parse(args)
 
 	if *url == "" && (*pemFile == "" || *issFile == "") {
-		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash [--pem <pem_file_path> --iss <ssuer-cert>|--url <url>]")
+		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash [--pem <pem_file_path> --iss <issuer-cert>|--url <url>]")
 		os.Exit(1)
 	}
 
