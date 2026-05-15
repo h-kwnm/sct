@@ -301,7 +301,7 @@ func parseDataTile(data []byte) ([]DataEntry, error) {
 	var entries []DataEntry
 
 	for r.Len() > 0 {
-		slog.Debug("data tile", "entry_index", len(entries))
+		slog.Debug("data tile", "entryIndex", len(entries))
 		entry, err := parseTileLeaf(r)
 		if err != nil {
 			return nil, fmt.Errorf("parsing a leaf certificate in data tile: %w", err)
@@ -455,7 +455,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				sct.LogID = base64.StdEncoding.EncodeToString(logID[:])
 				log, err := logByLogID(sct.LogID)
 				if err != nil {
-					slog.Warn("log not found for log id", "log_id", sct.LogID, "err", err)
+					slog.Warn("log not found for log id", "logId", sct.LogID, "err", err)
 				} else {
 					sct.LogIDDescription = log.Description
 				}

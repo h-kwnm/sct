@@ -81,7 +81,7 @@ func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 		return "", fmt.Errorf("invalid index(tile index %d is greater than tree size %d)", tileIndex, maxTileIndex)
 	}
 
-	slog.Debug("buildIndex", "leaf_index", leafIndex, "tile_index", tileIndex, "partial_index", partialIndex)
+	slog.Debug("buildIndex", "leafIndex", leafIndex, "tileIndex", tileIndex, "partialIndex", partialIndex)
 
 	// <monitoring prefix>/tile/data/<N>[.p/<W>]
 	// https://github.com/C2SP/C2SP/blob/main/static-ct-api.md#log-entries
@@ -89,7 +89,7 @@ func buildIndex(leafIndex uint64, treeSize uint64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	slog.Debug("buildIndex", "tile_index_path", indexPath)
+	slog.Debug("buildIndex", "tileIndexPath", indexPath)
 
 	return indexPath, nil
 }
