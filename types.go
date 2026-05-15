@@ -81,6 +81,10 @@ func (s *LogState) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &obj); err != nil {
 		return err
 	}
+	// check if log schema is not changed
+	if len(obj) != 1 {
+		return fmt.Errorf("unexpected log list syntax(one or more keys other than 'usable')")
+	}
 	for key := range obj {
 		*s = LogState(key)
 		return nil
