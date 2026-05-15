@@ -23,8 +23,8 @@ var (
 	oidExtensionKeyUsage              = asn1.ObjectIdentifier{2, 5, 29, 15}
 	oidExtensionSubjectAltName        = asn1.ObjectIdentifier{2, 5, 29, 17}
 	oidExtensionBasicConstraints      = asn1.ObjectIdentifier{2, 5, 29, 19}
-	oidExtensionCRLDistributionPoints = asn1.ObjectIdentifier{2, 5, 23, 31}
-	oidExtensionCertificatePolicies   = asn1.ObjectIdentifier{2, 5, 23, 32}
+	oidExtensionCRLDistributionPoints = asn1.ObjectIdentifier{2, 5, 29, 31}
+	oidExtensionCertificatePolicies   = asn1.ObjectIdentifier{2, 5, 29, 32}
 	oidExtensionAuthorityKeyId        = asn1.ObjectIdentifier{2, 5, 29, 35}
 	oidExtensionExtendedKeyUsage      = asn1.ObjectIdentifier{2, 5, 29, 37}
 	oidExtensionAuthorityInfoAccess   = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 1}
