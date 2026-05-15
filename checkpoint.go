@@ -31,7 +31,7 @@ func runCheckpoint(args []string) {
 
 	b, err := json.MarshalIndent(cp, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error marshaling JSON-formatted checkpoint : %v\n", err)
+		fmt.Fprintf(os.Stderr, "error marshaling JSON-formatted checkpoint: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Println(string(b))
