@@ -32,10 +32,11 @@ The assigned **ID** is used by other commands to identify a log.
 ### `get-sct` - Extract SCT extension contents
 
 Extracts SCT extension contents from a PEM-formatted certificate file or a given URL endpoint and prints them as JSON.
+When a certificate is specified by `--url` option, certificate verification can be skipped by `--insecure` option.
 
 ```sh
 sct get-sct --pem <pem-file>
-sct get-sct --url <url>
+sct get-sct --url <url> [--insecure]
 ```
 
 ### `audit-path` - Print audit path for a specified combination of leaf index and tree size
@@ -115,6 +116,7 @@ Fetches audit paths related to SCTs included in the given certificate.
 The certificate is passed by either `--pem` or `--url` option. When passed by `--pem`,
 the leaf certificate's issuer certificate must also be passed by `--iss` option.
 When `--url` option is specified, both leaf and issuer certificates are automatically fetched from the endpoint.
+Certificate verification can be skipped by `--insecure` option.
 
 The verification result is reported in the `verification_success` field of the JSON-formatted output.
 Object under `audit_proof` is bare response against get-proof-by-hash API. Target endpoints for get-proof-by-hash are
@@ -122,7 +124,7 @@ automatically identified from log IDs in SCTs.
 
 ```sh
 sct get-proof-by-hash --pem <leaf-cert-pem-file> --iss <issuer-cert-pem-file>
-sct get-proof-by-hash --url <url>
+sct get-proof-by-hash --url <url> [--insecure]
 ```
 
 ## Options
