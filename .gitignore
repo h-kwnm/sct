@@ -17,3 +17,6 @@ CLAUDE.md
 
 # environment variables
 .env
+
+# local issues
+.issues
