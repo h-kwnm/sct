@@ -65,7 +65,7 @@ func runGetProofByHash(args []string) {
 
 		results[i], err = fetchProofByHash(b64Hash, logs[i])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", results[i].Log.ID, err)
+			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", logs[i].ID, err)
 			os.Exit(1)
 		}
 
