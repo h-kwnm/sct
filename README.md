@@ -29,14 +29,23 @@ sct logs --type <type>      # filter by API type ("static" for Static CT API, "r
 
 The assigned **ID** is used by other commands to identify a log.
 
+### `get-roots` - Fetch a list of accepted root certificates
+
+Fetches a list of root certificates accepted by the specified log and prints it as JSON.
+
+```sh
+sct get-roots --log <id>
+```
+
 ### `get-sct` - Extract SCT extension contents
 
-Extracts SCT extension contents from a PEM-formatted certificate file by `--pem` or a given URL endpoint by `--url` and prints them as JSON.
+Extracts SCT extension contents from a PEM-formatted certificate file specified by `--pem` (PEM file)
+or `--url` (URL endpoint) and prints them as JSON.
 When a certificate is specified by `--url` option, certificate verification can be skipped by `--insecure` option.
 
 ```sh
-sct get-sct --pem <pem-file>
-sct get-sct --url <url> [--insecure]
+sct get-sct --pem <pem-file>          # pass certificate from local PEM file
+sct get-sct --url <url> [--insecure]  # fetch certificate from the URL
 ```
 
 ### `audit-path` - Print audit path for a specified combination of leaf index and tree size
@@ -49,7 +58,7 @@ This command only simulates an audit path calculated based on the specified para
 No HTTP requests are made, thus no need to specify target log.
 
 ```sh
-sct audit-path --index <leaf-index> --size <tree-size>
+sct audit-path --index <leaf-index> --size <tree-size>  # no network requests made
 ```
 
 ### `version` - Print version
@@ -77,15 +86,17 @@ Fetches the data tile containing the given leaf index, parses its entries, and p
 Additionally, data tile entries including the leaf are saved as a JSON file when the `--out` option is specified.
 
 ```sh
-sct data --log <id> --index <leaf-index>
-sct data --log <id> --index <leaf-index> --out <dir>   # save to specific directory, e.g., /tmp
+sct data --log <id> --index <leaf-index>               # print the index's leaf certificate
+sct data --log <id> --index <leaf-index> --out <dir>   # print the leaf and save whole tile entries to specific directory, e.g., /tmp
 ```
 
 ### `audit` - Verify whether the leaf at the given index is included in the log
 
-Fetches the tiles required to verify the leaf certificate's inclusion and print the fetched data and verification result as JSON.
+Fetches the tiles required to verify the leaf certificate's inclusion and prints the fetched data and verification result as JSON.
 The verification result is reported in the `verification_success` field of the JSON-formatted output.
 The output includes information on which tiles and hashes are used for the verification.
+
+See `audit-path` and `audit-tile` to simulate audit inputs without making network requests.
 
 ```sh
 sct audit --log <id> --index <leaf-index>
@@ -96,11 +107,11 @@ sct audit --log <id> --index <leaf-index>
 Prints the tiles in JSON format.
 The `tiles` field shows which tiles to fetch and which hash positions within each tile to use for proof verification.
 
-This command only simulates an audit tile to fetch, calculated based on the specified parameters.
+This command only simulates which tiles would be fetched, calculated based on the specified parameters.
 No HTTP requests are made, thus no need to specify target log.
 
 ```sh
-sct audit-tile --index <leaf-index> --size <tree-size>
+sct audit-tile --index <leaf-index> --size <tree-size>  # no network requests made
 ```
 
 ## RFC 6962 commands
@@ -122,7 +133,7 @@ Fetches audit paths related to SCTs included in the given certificate.
 The certificate is passed by either `--pem` or `--url` option. When passed by `--pem`,
 the leaf certificate's issuer certificate must also be passed by `--iss` option.
 When `--url` option is specified, both leaf and issuer certificates are automatically fetched from the endpoint.
-When a certificate is specified by `--url` option, certificate verification can be skipped by `--insecure` option.
+Certificate verification can be skipped by `--insecure` option.
 
 The verification result of the audit proof is reported in the `verification_success` field of the JSON-formatted output.
 The `audit_proof` field contains the raw response from the CT log's get-proof-by-hash endpoint.
@@ -131,6 +142,18 @@ Target endpoints for get-proof-by-hash are automatically identified from log IDs
 ```sh
 sct get-proof-by-hash --pem <leaf-cert-pem-file> --iss <issuer-cert-pem-file>
 sct get-proof-by-hash --url <url> [--insecure]
+```
+
+### `get-entries` - Fetch leaf certificate entries
+
+Fetches one or more leaf certificate entries from the specified log.
+Entries are identified by leaf index and offset. For example,
+when the command is run with `--index 1560` and `--offset 3`, it fetches 4 entries with index through index+offset, inclusive.
+Offset is 0 by default so only the entry specified by the leaf index is fetched when `--offset` is omitted.
+
+```sh
+sct get-entries --log <id> --index <leaf-index>                      # fetch only the index's entry
+sct get-entries --log <id> --index <leaf-index> [--offset <offset>]  # fetch multiple (offset+1) entries starting with the index
 ```
 
 ## Options
@@ -150,15 +173,16 @@ sct get-sct --url https://example.com --insecure
 
 ## Cache
 
-### Log
+### Log (persistent, ~/.cache/sct/logs.json)
 
-Log list is fetched and cached by first invocation of `sct logs` command.
+Log list is fetched and cached by the first invocation of `sct logs` command.
 The log list is cached at `~/.cache/sct/logs.json`. Run `sct logs --refresh` to update it.
 
-### Tile
+### Tile (ephemeral, deleted on reboot)
 
 Tiles fetched during `audit` command invocation are cached in `sct` directory
-under the system's cache directory, e.g., `/tmp/sct`. So, be noted that the cache is deleted after reboots.
+under the system's cache directory, e.g., `/tmp/sct` in case of Linux environment.
+Note that the cache is deleted after reboots.
 The cache file name is first 12 hex characters of a hash value, derived from the tiles' respective URL.
 
 ## License
