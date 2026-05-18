@@ -96,12 +96,20 @@ func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResult, error
 		if err != nil {
 			return GetEntriesResult{}, err
 		}
+
+		cr := bytes.NewReader(entry.ExtraData)
+		certs, err := parseCertChain(cr, mkl.TimestampedEntry.LogEntryType)
+		if err != nil {
+			return GetEntriesResult{}, err
+		}
 		result.Entries = append(result.Entries, struct {
-			LeafIndex uint64         "json:\"leaf_index\""
-			LeafInput MerkleTreeLeaf "json:\"leaf_input\""
+			LeafIndex uint64         `json:"leaf_index"`
+			LeafInput MerkleTreeLeaf `json:"leaf_input"`
+			ExtraData []ASN1Cert     `json:"extra_data"`
 		}{
 			LeafIndex: index + uint64(i),
 			LeafInput: mkl,
+			ExtraData: certs,
 		})
 	}
 	return result, nil

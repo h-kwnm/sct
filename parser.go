@@ -706,3 +706,76 @@ func parseMerkleTreeLeaf(r *bytes.Reader) (MerkleTreeLeaf, error) {
 
 	return mkl, nil
 }
+
+// parse certificate chain in LogEntry struct defined in RFC 6962.
+// in case of entryTypeX509, X509ChainEntry.certificate_chain is passed by the reader.
+// in case of entryTypePrecert, whole PrecertChainEntry is passed.
+//
+//	struct {
+//	    LogEntryType entry_type;
+//	    select (entry_type) {
+//	        case x509_entry: X509ChainEntry;
+//	        case precert_entry: PrecertChainEntry;
+//	    } entry;
+//	} LogEntry;
+//	opaque ASN.1Cert<1..2^24-1>;
+//	struct {
+//	    ASN.1Cert leaf_certificate;  // this is NOT included in extra_data
+//	    ASN.1Cert certificate_chain<0..2^24-1>;
+//	} X509ChainEntry;
+//	struct {
+//	    ASN.1Cert pre_certificate;
+//	    ASN.1Cert precertificate_chain<0..2^24-1>;
+//	} PrecertChainEntry;
+func parseCertChain(r *bytes.Reader, entryType uint16) ([]ASN1Cert, error) {
+	var certs []ASN1Cert
+
+	// read PrecertChainEntry.pre_certificate
+	if entryType == entryTypePrecert {
+		precertLen, err := readUint24(r)
+		if err != nil {
+			return nil, fmt.Errorf("reading precert length: %w", err)
+		}
+		preCertData := make([]byte, precertLen)
+		if _, err := io.ReadFull(r, preCertData); err != nil {
+			return nil, fmt.Errorf("reading precert data: %w", err)
+		}
+		precert, err := x509.ParseCertificate(preCertData)
+		if err != nil {
+			return nil, fmt.Errorf("parsing precert data as x509 certificate: %w", err)
+		}
+		certs = append(certs, ASN1Cert(*precert))
+	}
+
+	certChainLen, err := readUint24(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading certificate chain length: %w", err)
+	}
+	slog.Debug("parseCertChain", "certChainLen", certChainLen)
+
+	certChainData := make([]byte, certChainLen)
+	if _, err := io.ReadFull(r, certChainData); err != nil {
+		return nil, fmt.Errorf("reading certificate chain data: %w", err)
+	}
+
+	chainReader := bytes.NewReader(certChainData)
+
+	for chainReader.Len() > 0 {
+		certLen, err := readUint24(chainReader)
+		if err != nil {
+			return nil, fmt.Errorf("reading certificate chain entry length: %w", err)
+		}
+		slog.Debug("parseCertChain", "certLen", certLen)
+		certData := make([]byte, certLen)
+		if _, err := io.ReadFull(chainReader, certData); err != nil {
+			return nil, fmt.Errorf("reading certificate chain entry data: %w", err)
+		}
+		cert, err := x509.ParseCertificate(certData)
+		if err != nil {
+			return nil, fmt.Errorf("parsing certificate chain entry data as x509 certificate: %w", err)
+		}
+		certs = append(certs, ASN1Cert(*cert))
+	}
+
+	return certs, nil
+}

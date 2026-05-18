@@ -651,6 +651,6 @@ type GetEntriesResult struct {
 	Entries []struct {
 		LeafIndex uint64         `json:"leaf_index"`
 		LeafInput MerkleTreeLeaf `json:"leaf_input"`
-		// TODO: extra_data
+		ExtraData []ASN1Cert     `json:"extra_data"`
 	}
 }
