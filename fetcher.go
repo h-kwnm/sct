@@ -89,7 +89,7 @@ func fetchAcceptedRootCertificate(log *CachedLog) (*AcceptedRootCertificates, er
 		return nil, fmt.Errorf("failed to unmarshal response body to JSON: %w", err)
 	}
 
-	var roots []RootCertificate
+	var roots []Certificate
 	for i, root := range res.Certificates {
 		d, err := base64.StdEncoding.DecodeString(root)
 		if err != nil {
@@ -102,13 +102,13 @@ func fetchAcceptedRootCertificate(log *CachedLog) (*AcceptedRootCertificates, er
 			// - "x509: negative serial number"
 			// - "x509: invalid RDNSequence: invalid attribute value: unsupported string type: 3"
 			slog.Warn("failed to parse root certificate, skipped", "location", i, "err", err, "cert", root)
-			roots = append(roots, RootCertificate{
+			roots = append(roots, Certificate{
 				Raw:        root,
 				ParseError: err.Error(),
 			})
 			continue
 		}
-		roots = append(roots, RootCertificate{
+		roots = append(roots, Certificate{
 			Raw:            root,
 			Version:        cert.Version,
 			SerialNumber:   fmt.Sprintf("%x", cert.SerialNumber),

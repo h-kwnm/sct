@@ -232,19 +232,20 @@ func (pc Precert) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type LeafCertificate struct {
-	// Raw            string     `json:"raw"`
+type Certificate struct {
+	Raw            string     `json:"raw"`
+	ParseError     string     `json:"parse_error,omitempty"`
 	Version        int        `json:"version,omitempty"`
 	SerialNumber   string     `json:"serial,omitempty"`
 	SignatureAlg   string     `json:"sig_alg,omitempty"`
 	Issuer         string     `json:"issuer,omitempty"`
-	NotBefore      time.Time  `json:"not_before"`
-	NotAfter       time.Time  `json:"not_after"`
+	NotBefore      time.Time  `json:"not_before,omitempty"`
+	NotAfter       time.Time  `json:"not_after,omitempty"`
 	Subject        string     `json:"subject,omitempty"`
 	PublicKeyAlg   string     `json:"pubkey_alg,omitempty"`
+	SubjectKeyId   string     `json:"ski,omitempty"`
 	DNSNames       []string   `json:"dns_names,omitempty"`
 	IPAddresses    []string   `json:"ip_addresses,omitempty"`
-	SubjectKeyId   string     `json:"ski,omitempty"`
 	AuthorityKeyId string     `json:"aki,omitempty"`
 	Policies       []x509.OID `json:"policies,omitempty"`
 	KeyUsage       []string   `json:"key_usage,omitempty"`
@@ -254,7 +255,7 @@ type LeafCertificate struct {
 type ASN1Cert x509.Certificate
 
 func (ac ASN1Cert) MarshalJSON() ([]byte, error) {
-	leafCert := LeafCertificate{
+	cert := Certificate{
 		Version:        ac.Version,
 		SerialNumber:   fmt.Sprintf("%x", ac.SerialNumber),
 		SignatureAlg:   ac.SignatureAlgorithm.String(),
@@ -270,7 +271,7 @@ func (ac ASN1Cert) MarshalJSON() ([]byte, error) {
 		ExtKeyUsage:    parseExtKeyUsage(ac.ExtKeyUsage),
 	}
 
-	return json.Marshal(leafCert)
+	return json.Marshal(cert)
 }
 
 type TimestampedEntry struct {
