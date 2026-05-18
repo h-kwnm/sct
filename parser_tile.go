@@ -252,8 +252,6 @@ func parseTileLeaf(r *bytes.Reader) (DataEntry, error) {
 		// https://community.letsencrypt.org/t/request-for-feedback-do-you-use-the-subject-key-identifier-field-of-our-certificates/222108
 		entry.Certificate.SubjectKeyId = fmt.Sprintf("%x", cert.SubjectKeyId)
 
-		// TODO: is it preferrable to add ski value calculated from "cert.PublicKey" when it is absent?
-
 		entry.Certificate.AuthorityKeyId = fmt.Sprintf("%x", cert.AuthorityKeyId)
 		entry.Certificate.SignatureAlg = cert.SignatureAlgorithm.String()
 		entry.Certificate.PublicKeyAlg = cert.PublicKeyAlgorithm.String()
