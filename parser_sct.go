@@ -166,7 +166,7 @@ func buildMerkleTreeLeaves(cert, issCert *x509.Certificate) ([]MerkleTreeLeaf, [
 			tsEntries = append(tsEntries, TimestampedEntry{
 				Timestamp:    sct.Timestamp,
 				LogEntryType: entryTypePrecert,
-				Precert:      precert,
+				Precert:      &precert,
 				CtExtensions: 0x0000,
 			})
 		}
@@ -245,7 +245,7 @@ func parseTimestampedEntryRFC6962(r *bytes.Reader) (TimestampedEntry, error) {
 		}
 		precert.RawTBSCertificate = tbsData
 
-		tsEntry.Precert = precert
+		tsEntry.Precert = &precert
 	}
 
 	return tsEntry, nil

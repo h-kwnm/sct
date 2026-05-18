@@ -277,7 +277,7 @@ type TimestampedEntry struct {
 	Timestamp    CTTimestamp `json:"timestamp"`
 	LogEntryType uint16      `json:"entry_type"`
 	ASN1Cert     ASN1Cert    `json:"asn1cert"`      // LogEntryType = 0(x509_entry)
-	Precert      Precert     `json:"precert"`       // LogEntryType = 1(precert_entry)
+	Precert      *Precert    `json:"precert"`       // LogEntryType = 1(precert_entry)
 	CtExtensions uint16      `json:"ct_extensions"` // this types is only for RFC 6962, so always "0x0000"
 	// "CtExtensions" should be "CTExtensions" to follow Go's convention
 	// but I chose to honor RFC 6962's definition
@@ -317,7 +317,7 @@ func (t TimestampedEntry) MarshalJSON() ([]byte, error) {
 		}{
 			Timestamp:    t.Timestamp,
 			LogEntryType: t.LogEntryType,
-			Precert:      t.Precert,
+			Precert:      *(t.Precert),
 			CtExtensions: t.CtExtensions,
 		}
 		return json.Marshal(tsPrecert)

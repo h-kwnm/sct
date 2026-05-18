@@ -126,7 +126,7 @@ func TestTimestampedEntryMarshal(t *testing.T) {
 	entry := TimestampedEntry{
 		Timestamp:    ts,
 		LogEntryType: entryTypePrecert,
-		Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTBSCertificate: tbs},
+		Precert:      &Precert{IssuerKeyHash: [32]byte{}, RawTBSCertificate: tbs},
 		CtExtensions: 0x0000,
 	}
 
@@ -167,7 +167,7 @@ func TestMerkleTreeLeafMarshal(t *testing.T) {
 		TimestampedEntry: TimestampedEntry{
 			Timestamp:    CTTimestamp(1_700_000_000_000),
 			LogEntryType: entryTypePrecert,
-			Precert:      Precert{IssuerKeyHash: [32]byte{}, RawTBSCertificate: []byte{0xBB}},
+			Precert:      &Precert{IssuerKeyHash: [32]byte{}, RawTBSCertificate: []byte{0xBB}},
 			CtExtensions: 0x0000,
 		},
 	}
