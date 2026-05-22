@@ -52,7 +52,6 @@ func httpGet(ctx context.Context, url string, limit int64) ([]byte, error) {
 }
 
 func fetchLogList() (*LogList, error) {
-
 	body, err := httpGet(context.Background(), logListURL, 1<<20)
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", logListURL, err)
