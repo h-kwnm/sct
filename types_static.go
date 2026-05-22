@@ -70,42 +70,18 @@ type SignedNoteSignature struct {
 //
 // opaque Fingerprint[32]; // 32 byte
 
-type CertEntry struct {
-	Subject        string    `json:"subject"`
-	Issuer         string    `json:"issuer"`
-	Serial         string    `json:"serial"`
-	NotBefore      time.Time `json:"not_before"`
-	NotAfter       time.Time `json:"not_after"`
-	DNSNames       []string  `json:"dns_names"`
-	IPAddresses    []string  `json:"ip_addresses"`
-	SubjectKeyId   string    `json:"ski"`
-	AuthorityKeyId string    `json:"aki"`
-	SignatureAlg   string    `json:"sig_alg"`
-	PublicKeyAlg   string    `json:"pubkey_alg"`
-	Policies       []string  `json:"policies"`
-	// TODO:
-	// KeyUsage
-	// Extensions
-	// ExtraExtensions
-	// UnhandledCriticalExtensions
-	// ExtKeyUsage
-	// UnknownExtKeyUsage
-	// PolicyIdentifiers
-	// Policies
-}
-
 type DataEntry struct {
 	Timestamp     time.Time `json:"timestamp"`
 	EntryType     string    `json:"entry_type"`
 	LeafIndex     uint64    `json:"leaf_index"`
-	IssuerKeyHash string    `json:"issuer_key_hash"`
+	IssuerKeyHash string    `json:"issuer_key_hash,omitempty"`
 	Fingerprints  []string  `json:"fps_chain"`
-	Certificate   CertEntry `json:"certificate"`
+	Certificate   ASN1Cert  `json:"certificate"`
 }
 
 type DataTile struct {
 	MonitoringURL string      `json:"monitoring_url"`
 	TileIndexPath string      `json:"tile_index_path"`
-	FetchedAt     time.Time   `json:"fetched_time"`
+	FetchedAt     time.Time   `json:"fetched_at"`
 	Entries       []DataEntry `json:"entries"`
 }

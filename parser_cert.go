@@ -68,3 +68,6 @@ func parseExtKeyUsage(eku []x509.ExtKeyUsage) []string {
 
 	return usages
 }
+
+// TODO: implement
+// func parsePolicies

@@ -176,7 +176,7 @@ func TestParseDataTileSingleX509Entry(t *testing.T) {
 	if !e.Timestamp.Equal(wantTs) {
 		t.Errorf("Timestamp = %v, want %v", e.Timestamp, wantTs)
 	}
-	if e.Certificate.Subject == "" {
+	if e.Certificate.Subject.String() == "" {
 		t.Error("Certificate.Subject is empty")
 	}
 	if len(e.Certificate.DNSNames) != 1 || e.Certificate.DNSNames[0] != "test.example.com" {
@@ -337,8 +337,8 @@ func TestTrimSCTExtensionNoSCT(t *testing.T) {
 // for an x509 entry (the leaf_input field returned by get-entry-and-proof).
 func buildRFC6962X509LeafInput(certDER []byte, tsMillis uint64) []byte {
 	var buf bytes.Buffer
-	buf.WriteByte(0) // version
-	buf.WriteByte(0) // leaf_type (timestamped_entry)
+	buf.WriteByte(0)                                            // version
+	buf.WriteByte(0)                                            // leaf_type (timestamped_entry)
 	binary.Write(&buf, binary.BigEndian, tsMillis)              //nolint:errcheck
 	binary.Write(&buf, binary.BigEndian, uint16(entryTypeX509)) //nolint:errcheck
 	n := uint32(len(certDER))
@@ -403,8 +403,8 @@ func TestMerkleTreeLeafMarshalX509RoundTrip(t *testing.T) {
 // for a precert entry (the leaf_input field returned by get-entry-and-proof).
 func buildRFC6962PrecertLeafInput(isk [32]byte, tbsDER []byte, tsMillis uint64) []byte {
 	var buf bytes.Buffer
-	buf.WriteByte(0) // version
-	buf.WriteByte(0) // leaf_type (timestamped_entry)
+	buf.WriteByte(0)                                               // version
+	buf.WriteByte(0)                                               // leaf_type (timestamped_entry)
 	binary.Write(&buf, binary.BigEndian, tsMillis)                 //nolint:errcheck
 	binary.Write(&buf, binary.BigEndian, uint16(entryTypePrecert)) //nolint:errcheck
 	buf.Write(isk[:])

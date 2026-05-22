@@ -255,16 +255,22 @@ type Certificate struct {
 type ASN1Cert x509.Certificate
 
 func (ac ASN1Cert) MarshalJSON() ([]byte, error) {
+	var ips []string
+	for _, ip := range ac.IPAddresses {
+		ips = append(ips, ip.String())
+	}
 	cert := Certificate{
 		Version:        ac.Version,
-		SerialNumber:   fmt.Sprintf("%x", ac.SerialNumber),
+		SerialNumber:   ac.SerialNumber.Text(16),
 		SignatureAlg:   ac.SignatureAlgorithm.String(),
 		Issuer:         ac.Issuer.String(),
-		NotBefore:      ac.NotBefore,
-		NotAfter:       ac.NotAfter,
+		NotBefore:      ac.NotBefore.UTC(),
+		NotAfter:       ac.NotAfter.UTC(),
 		Subject:        ac.Subject.String(),
 		PublicKeyAlg:   ac.PublicKeyAlgorithm.String(),
 		SubjectKeyId:   fmt.Sprintf("%x", ac.SubjectKeyId),
+		DNSNames:       ac.DNSNames,
+		IPAddresses:    ips,
 		AuthorityKeyId: fmt.Sprintf("%x", ac.AuthorityKeyId),
 		Policies:       ac.Policies,
 		KeyUsage:       parseKeyUsage(ac.KeyUsage),
