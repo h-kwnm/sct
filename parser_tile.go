@@ -237,39 +237,6 @@ func parseTileLeaf(r *bytes.Reader) (DataEntry, error) {
 
 	slog.Debug("parseTileLeaf", "headerLen", 2, "fpLen", fpLen)
 
-	// if cert, err := x509.ParseCertificate(certDer); err == nil {
-	// 	entry.Certificate.Subject = cert.Subject.String()
-	// 	entry.Certificate.Issuer = cert.Issuer.String()
-	// 	entry.Certificate.Serial = cert.SerialNumber.Text(16) // convert big int to hex string
-	// 	entry.Certificate.NotBefore = cert.NotBefore.UTC()
-	// 	entry.Certificate.NotAfter = cert.NotAfter.UTC()
-
-	// 	// SubjectKeyIdentifer is NOT RECOMMENDED in CA/B Forum BR, so this value could be empty.
-	// 	// 7.1.2.7.6 Subscriber Certificate Extensions
-	// 	// https://cabforum.org/working-groups/server/baseline-requirements/documents/CA-Browser-Forum-TLS-BR-2.2.6.pdf
-	// 	// As an example, Let's Encrypt seems to follow this policy in a newer profile.
-	// 	// https://community.letsencrypt.org/t/request-for-feedback-do-you-use-the-subject-key-identifier-field-of-our-certificates/222108
-	// 	entry.Certificate.SubjectKeyId = fmt.Sprintf("%x", cert.SubjectKeyId)
-
-	// 	entry.Certificate.AuthorityKeyId = fmt.Sprintf("%x", cert.AuthorityKeyId)
-	// 	entry.Certificate.SignatureAlg = cert.SignatureAlgorithm.String()
-	// 	entry.Certificate.PublicKeyAlg = cert.PublicKeyAlgorithm.String()
-
-	// 	entry.Certificate.DNSNames = append(entry.Certificate.DNSNames, cert.DNSNames...)
-
-	// 	for _, ip := range cert.IPAddresses {
-	// 		entry.Certificate.IPAddresses = append(entry.Certificate.IPAddresses, ip.String())
-	// 	}
-
-	// 	// Policy OID reference https://cabforum.org/resources/object-registry/
-	// 	for _, oid := range cert.Policies {
-	// 		entry.Certificate.Policies = append(entry.Certificate.Policies, oid.String())
-	// 	}
-	// } else {
-	// 	slog.Error("failed to parse ASN.1", "err", err)
-	// 	return DataEntry{}, fmt.Errorf("parsing x509 certificate: %w", err)
-	// }
-
 	cert, err := x509.ParseCertificate(certDer)
 	if err != nil {
 		return DataEntry{}, fmt.Errorf("parsing x509 certificate: %w", err)
