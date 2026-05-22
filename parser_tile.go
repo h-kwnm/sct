@@ -25,6 +25,7 @@ func parseTile(r io.Reader) (Tile, error) {
 		}
 		tile.Hashes = append(tile.Hashes, h)
 	}
+	slog.Debug("parseTile", "tileCount", len(tile.Hashes))
 
 	return tile, nil
 }
@@ -45,6 +46,7 @@ func parseSignedEntry(r *bytes.Reader, de *DataEntry, entryType uint16) ([]byte,
 	default:
 		return nil, fmt.Errorf("unknown entry type: %d", entryType)
 	}
+	slog.Debug("parseSignedEntry", "entryType", entryType)
 
 	derLen, err := readUint24(r) // 3 bytes length header
 	if err != nil {
@@ -171,6 +173,7 @@ func parseTimestampedEntry(r *bytes.Reader, de *DataEntry) ([]byte, uint16, erro
 	} else {
 		de.LeafIndex = ext.Value
 	}
+	slog.Debug("parseTimestampedEntry", "sctCounts", ext.Length)
 	return certDer, entryType, nil
 }
 

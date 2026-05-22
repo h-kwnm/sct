@@ -73,6 +73,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 			if err := binary.Read(r, binary.BigEndian, &totalSCTLen); err != nil {
 				return nil, fmt.Errorf("failed to read SCT list length: %v", err)
 			}
+			slog.Debug("parseCertSCT", "totalSCTLen", totalSCTLen)
 			sctListData := make([]byte, totalSCTLen)
 			_, err = io.ReadFull(r, sctListData)
 			if err != nil {
@@ -88,6 +89,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				if err := binary.Read(sctReader, binary.BigEndian, &sctLen); err != nil {
 					return nil, fmt.Errorf("failed to read SCT extension length: %w", err)
 				}
+				slog.Debug("parseCertSCT", "sctLen", sctLen)
 
 				sctData := make([]byte, sctLen)
 				_, err := io.ReadFull(sctReader, sctData[:])
@@ -101,6 +103,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 					return nil, fmt.Errorf("failed to read SCT version: %w", err)
 				}
 				sct.Version = sctVersion
+				slog.Debug("parseCertSCT", "sctVersion", sctVersion)
 
 				var logID [32]byte
 				if err := binary.Read(sr, binary.BigEndian, logID[:]); err != nil {
@@ -108,6 +111,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				}
 				// align the same format with "log_id" field in log_list.json
 				sct.LogID = base64.StdEncoding.EncodeToString(logID[:])
+				slog.Debug("parseCertSCT", "LogID", sct.LogID)
 				log, err := logByLogID(sct.LogID)
 				if err != nil {
 					slog.Warn("log not found for log id", "logId", sct.LogID, "err", err)
@@ -128,6 +132,7 @@ func parseCertSCT(cert *x509.Certificate) ([]SCT, error) {
 				if ctExt.Length != 0 {
 					sct.CtExtensions = append(sct.CtExtensions, ctExt)
 				}
+				slog.Debug("parseCertSCT", "ctExt.Length", ctExt.Length)
 
 				scts = append(scts, sct)
 			}
@@ -203,12 +208,14 @@ func parseTimestampedEntryRFC6962(r *bytes.Reader) (TimestampedEntry, error) {
 		return TimestampedEntry{}, err
 	}
 	tsEntry.Timestamp = CTTimestamp(timestamp)
+	slog.Debug("parseTimestampedEntryRFC6962", "timestamp", timestamp)
 
 	var entryType uint16
 	if err := binary.Read(r, binary.BigEndian, &entryType); err != nil {
 		return TimestampedEntry{}, err
 	}
 	tsEntry.LogEntryType = entryType
+	slog.Debug("parseTimestampedEntryRFC6962", "entryType", entryType)
 
 	switch entryType {
 	case entryTypeX509:
@@ -264,6 +271,7 @@ func parseMerkleTreeLeaf(r *bytes.Reader) (MerkleTreeLeaf, error) {
 	}
 	mkl.Version = version
 	mkl.MerkleLeafType = leafType
+	slog.Debug("parseMerkleTreeLeaf", "version", version, "leafType", leafType)
 
 	tsData, err := io.ReadAll(r)
 	if err != nil {
@@ -310,6 +318,7 @@ func parseCertChain(r *bytes.Reader, entryType uint16) ([]ASN1Cert, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading precert length: %w", err)
 		}
+		slog.Debug("parseCertChain", "precertLen", precertLen)
 		preCertData := make([]byte, precertLen)
 		if _, err := io.ReadFull(r, preCertData); err != nil {
 			return nil, fmt.Errorf("reading precert data: %w", err)
