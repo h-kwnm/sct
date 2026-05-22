@@ -146,7 +146,7 @@ func logByID(id int, apiType APIType) (*CachedLog, error) {
 	for i := range cache.Logs {
 		if cache.Logs[i].ID == id {
 			if cache.Logs[i].APIType != apiType {
-				return nil, fmt.Errorf("unexpected log was specified(invalid API type: expected %s, but the log %d is %s type)", apiType, id, cache.Logs[i].APIType)
+				return nil, fmt.Errorf("log %d has API type %s, want %s", id, cache.Logs[i].APIType, apiType)
 			}
 			return &cache.Logs[i], nil
 		}
