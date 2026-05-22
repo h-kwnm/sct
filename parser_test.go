@@ -333,6 +333,72 @@ func TestTrimSCTExtensionNoSCT(t *testing.T) {
 	}
 }
 
+// buildRFC6962X509LeafInput constructs the RFC 6962 MerkleTreeLeaf wire format
+// for an x509 entry (the leaf_input field returned by get-entry-and-proof).
+func buildRFC6962X509LeafInput(certDER []byte, tsMillis uint64) []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(0) // version
+	buf.WriteByte(0) // leaf_type (timestamped_entry)
+	binary.Write(&buf, binary.BigEndian, tsMillis)              //nolint:errcheck
+	binary.Write(&buf, binary.BigEndian, uint16(entryTypeX509)) //nolint:errcheck
+	n := uint32(len(certDER))
+	buf.Write([]byte{byte(n >> 16), byte(n >> 8), byte(n)})
+	buf.Write(certDER)
+	binary.Write(&buf, binary.BigEndian, uint16(0)) //nolint:errcheck // ct_extensions always empty in RFC 6962
+	return buf.Bytes()
+}
+
+// --- parseMerkleTreeLeaf ---
+
+func TestParseMerkleTreeLeafX509(t *testing.T) {
+	certDER := generateSelfSignedCert(t)
+	const tsMillis = uint64(1_700_000_000_000)
+
+	leafInput := buildRFC6962X509LeafInput(certDER, tsMillis)
+	r := bytes.NewReader(leafInput)
+	mkl, err := parseMerkleTreeLeaf(r)
+	if err != nil {
+		t.Fatalf("parseMerkleTreeLeaf: %v", err)
+	}
+
+	if mkl.Version != 0 {
+		t.Errorf("Version = %d, want 0", mkl.Version)
+	}
+	if mkl.MerkleLeafType != 0 {
+		t.Errorf("MerkleLeafType = %d, want 0", mkl.MerkleLeafType)
+	}
+	if mkl.TimestampedEntry.LogEntryType != entryTypeX509 {
+		t.Errorf("LogEntryType = %d, want %d", mkl.TimestampedEntry.LogEntryType, entryTypeX509)
+	}
+	if uint64(mkl.TimestampedEntry.Timestamp) != tsMillis {
+		t.Errorf("Timestamp = %d, want %d", mkl.TimestampedEntry.Timestamp, tsMillis)
+	}
+	if mkl.TimestampedEntry.Precert != nil {
+		t.Error("Precert should be nil for x509 entry")
+	}
+}
+
+// TestMerkleTreeLeafMarshalX509RoundTrip verifies that parsing an x509 leaf_input
+// and re-marshaling it reproduces the original bytes. This is required for correct
+// leaf hash computation in fetchEntryAndProof.
+func TestMerkleTreeLeafMarshalX509RoundTrip(t *testing.T) {
+	certDER := generateSelfSignedCert(t)
+	const tsMillis = uint64(1_700_000_000_000)
+
+	original := buildRFC6962X509LeafInput(certDER, tsMillis)
+
+	r := bytes.NewReader(original)
+	mkl, err := parseMerkleTreeLeaf(r)
+	if err != nil {
+		t.Fatalf("parseMerkleTreeLeaf: %v", err)
+	}
+
+	got := mkl.Marshal()
+	if !bytes.Equal(got, original) {
+		t.Errorf("marshal roundtrip mismatch:\ngot  %x\nwant %x", got, original)
+	}
+}
+
 func TestParseDataTileWithFingerprint(t *testing.T) {
 	certDER := generateSelfSignedCert(t)
 

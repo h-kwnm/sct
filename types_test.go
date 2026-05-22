@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/x509"
 	"encoding/json"
 	"testing"
 )
@@ -153,6 +154,63 @@ func TestTimestampedEntryMarshal(t *testing.T) {
 	}
 	// total length: 8 (ts) + 2 (type) + Precert.Marshal() + 2 (ext)
 	wantLen := 8 + 2 + len(entry.Precert.Marshal()) + 2
+	if len(got) != wantLen {
+		t.Errorf("len = %d, want %d", len(got), wantLen)
+	}
+}
+
+func TestTimestampedEntryMarshalX509(t *testing.T) {
+	certDER := generateSelfSignedCert(t)
+	cert, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		t.Fatalf("ParseCertificate: %v", err)
+	}
+
+	const ts = CTTimestamp(1_700_000_000_000)
+	entry := TimestampedEntry{
+		Timestamp:    ts,
+		LogEntryType: entryTypeX509,
+		ASN1Cert:     ASN1Cert(*cert),
+		CtExtensions: 0x0000,
+	}
+
+	got := entry.Marshal()
+
+	// timestamp: bytes 0-7
+	var gotTs uint64
+	for i := range 8 {
+		gotTs = gotTs<<8 | uint64(got[i])
+	}
+	if gotTs != uint64(ts) {
+		t.Errorf("timestamp = %d, want %d", gotTs, uint64(ts))
+	}
+
+	// entry_type: bytes 8-9
+	gotType := uint16(got[8])<<8 | uint16(got[9])
+	if gotType != entryTypeX509 {
+		t.Errorf("entry_type = %d, want %d", gotType, entryTypeX509)
+	}
+
+	// cert length: bytes 10-12 (3-byte big-endian uint24)
+	gotCertLen := int(got[10])<<16 | int(got[11])<<8 | int(got[12])
+	if gotCertLen != len(certDER) {
+		t.Errorf("cert length = %d, want %d", gotCertLen, len(certDER))
+	}
+
+	// cert content
+	if !bytes.Equal(got[13:13+gotCertLen], certDER) {
+		t.Error("cert DER content mismatch")
+	}
+
+	// ct_extensions: last 2 bytes
+	n := len(got)
+	gotExt := uint16(got[n-2])<<8 | uint16(got[n-1])
+	if gotExt != 0 {
+		t.Errorf("ct_extensions = %d, want 0", gotExt)
+	}
+
+	// total length: 8 (ts) + 2 (type) + 3 (cert len) + len(certDER) + 2 (ext)
+	wantLen := 8 + 2 + 3 + len(certDER) + 2
 	if len(got) != wantLen {
 		t.Errorf("len = %d, want %d", len(got), wantLen)
 	}
