@@ -233,14 +233,14 @@ func (pc Precert) MarshalJSON() ([]byte, error) {
 }
 
 type Certificate struct {
-	Raw            string     `json:"raw"`
+	Raw            string     `json:"raw,omitempty"`
 	ParseError     string     `json:"parse_error,omitempty"`
 	Version        int        `json:"version,omitempty"`
 	SerialNumber   string     `json:"serial,omitempty"`
 	SignatureAlg   string     `json:"sig_alg,omitempty"`
 	Issuer         string     `json:"issuer,omitempty"`
-	NotBefore      time.Time  `json:"not_before,omitempty"`
-	NotAfter       time.Time  `json:"not_after,omitempty"`
+	NotBefore      time.Time  `json:"not_before"`
+	NotAfter       time.Time  `json:"not_after"`
 	Subject        string     `json:"subject,omitempty"`
 	PublicKeyAlg   string     `json:"pubkey_alg,omitempty"`
 	SubjectKeyId   string     `json:"ski,omitempty"`
