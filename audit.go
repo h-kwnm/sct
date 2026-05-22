@@ -20,7 +20,7 @@ func runAudit(args []string) {
 
 	log, err := logByID(*logID, APITypeStaticCT)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "log %d (type %s) not found: %v\n", APITypeStaticCT, err)
+		fmt.Fprintf(os.Stderr, "log %d (type %s) not found: %v\n", *logID, APITypeStaticCT, err)
 		os.Exit(1)
 	}
 

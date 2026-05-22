@@ -14,7 +14,7 @@ func runGetSTH(args []string) {
 
 	log, err := logByID(*logID, APITypeRFC6962)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "log %d (type %s) not found: %v\n", APITypeRFC6962, err)
+		fmt.Fprintf(os.Stderr, "log %d (type %s) not found: %v\n", *logID, APITypeRFC6962, err)
 		os.Exit(1)
 	}
 
