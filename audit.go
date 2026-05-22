@@ -81,7 +81,7 @@ func runAuditTile(args []string) {
 
 	j, err := json.MarshalIndent(tiles, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to marshal tile accesses as JSON\n")
+		fmt.Fprintf(os.Stderr, "failed to marshal tile accesses as JSON: %v\n", err)
 		os.Exit(1)
 	}
 

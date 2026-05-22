@@ -16,7 +16,7 @@ func runGetEntryAndProof(args []string) {
 
 	log, err := logByID(*logID, APITypeRFC6962)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "no log %d with type of %s not found: %v", *logID, APITypeRFC6962, err)
+		fmt.Fprintf(os.Stderr, "no log %d with type of %s not found: %v\n", *logID, APITypeRFC6962, err)
 		os.Exit(1)
 	}
 
