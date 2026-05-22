@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -49,6 +50,7 @@ func fetchProofByHash(h string, log *CachedLog) (RFC6962ProofResult, error) {
 	if err != nil {
 		return RFC6962ProofResult{}, fmt.Errorf("fetching from %s: %w", endpoint, err)
 	}
+	slog.Debug("fetchProofByHash", "endpoint", endpoint)
 
 	var p RFC6962Proof
 	if err := json.Unmarshal(body, &p); err != nil {
@@ -84,6 +86,7 @@ func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResult, error
 	if err != nil {
 		return GetEntriesResult{}, fmt.Errorf("fetching from %s: %w", endpoint, err)
 	}
+	slog.Debug("fetchEntries", "endpoint", endpoint)
 
 	var entries GetEntriesResponse
 	if err := json.Unmarshal(body, &entries); err != nil {
@@ -141,6 +144,7 @@ func fetchEntryAndProof(index, size uint64, log *CachedLog) (GetEntryAndProofRes
 	if err != nil {
 		return GetEntryAndProofResult{}, fmt.Errorf("fetching from %s: %w", endpoint, err)
 	}
+	slog.Debug("fetchEntryAndProof", "endpoint", endpoint)
 
 	var response GetEntryAndProofResponse
 	if err := json.Unmarshal(body, &response); err != nil {
@@ -163,6 +167,7 @@ func fetchEntryAndProof(index, size uint64, log *CachedLog) (GetEntryAndProofRes
 	b64Hash := base64.StdEncoding.EncodeToString(h[:])
 
 	return GetEntryAndProofResult{
+		FetchedAt: time.Now().UTC(),
 		Log:       log,
 		LeafHash:  b64Hash,
 		LeafInput: mkl,

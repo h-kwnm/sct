@@ -399,6 +399,47 @@ func TestMerkleTreeLeafMarshalX509RoundTrip(t *testing.T) {
 	}
 }
 
+// buildRFC6962PrecertLeafInput constructs the RFC 6962 MerkleTreeLeaf wire format
+// for a precert entry (the leaf_input field returned by get-entry-and-proof).
+func buildRFC6962PrecertLeafInput(isk [32]byte, tbsDER []byte, tsMillis uint64) []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(0) // version
+	buf.WriteByte(0) // leaf_type (timestamped_entry)
+	binary.Write(&buf, binary.BigEndian, tsMillis)                 //nolint:errcheck
+	binary.Write(&buf, binary.BigEndian, uint16(entryTypePrecert)) //nolint:errcheck
+	buf.Write(isk[:])
+	n := uint32(len(tbsDER))
+	buf.Write([]byte{byte(n >> 16), byte(n >> 8), byte(n)})
+	buf.Write(tbsDER)
+	binary.Write(&buf, binary.BigEndian, uint16(0)) //nolint:errcheck // ct_extensions always empty in RFC 6962
+	return buf.Bytes()
+}
+
+// TestMerkleTreeLeafMarshalPrecertRoundTrip verifies that parsing a precert leaf_input
+// and re-marshaling it reproduces the original bytes. Catches the bug where io.ReadAll
+// absorbed the trailing CtExtensions bytes into RawTBSCertificate, corrupting the hash.
+func TestMerkleTreeLeafMarshalPrecertRoundTrip(t *testing.T) {
+	var isk [32]byte
+	for i := range isk {
+		isk[i] = byte(i)
+	}
+	tbsDER := []byte{0x30, 0x05, 0x01, 0x01, 0xFF, 0x02, 0x00} // minimal ASN.1 stub
+	const tsMillis = uint64(1_700_000_000_000)
+
+	original := buildRFC6962PrecertLeafInput(isk, tbsDER, tsMillis)
+
+	r := bytes.NewReader(original)
+	mkl, err := parseMerkleTreeLeaf(r)
+	if err != nil {
+		t.Fatalf("parseMerkleTreeLeaf: %v", err)
+	}
+
+	got := mkl.Marshal()
+	if !bytes.Equal(got, original) {
+		t.Errorf("marshal roundtrip mismatch:\ngot  %x\nwant %x", got, original)
+	}
+}
+
 func TestParseDataTileWithFingerprint(t *testing.T) {
 	certDER := generateSelfSignedCert(t)
 

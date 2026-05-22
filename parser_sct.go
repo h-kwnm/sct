@@ -234,13 +234,13 @@ func parseTimestampedEntryRFC6962(r *bytes.Reader) (TimestampedEntry, error) {
 		}
 		precert.IssuerKeyHash = isk
 
-		_, err := readUint24(r) // skip 3 bytes of TBSCertificate length header
+		tbsLen, err := readUint24(r)
 		if err != nil {
 			return TimestampedEntry{}, err
 		}
 
-		tbsData, err := io.ReadAll(r)
-		if err != nil {
+		tbsData := make([]byte, tbsLen)
+		if _, err := io.ReadFull(r, tbsData); err != nil {
 			return TimestampedEntry{}, err
 		}
 		precert.RawTBSCertificate = tbsData
