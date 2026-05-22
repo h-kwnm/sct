@@ -289,7 +289,16 @@ func (t TimestampedEntry) Marshal() []byte {
 	var b bytes.Buffer
 	binary.Write(&b, binary.BigEndian, t.Timestamp)
 	binary.Write(&b, binary.BigEndian, t.LogEntryType)
-	b.Write(t.Precert.Marshal())
+	switch t.LogEntryType {
+	case entryTypeX509:
+		raw := x509.Certificate(t.ASN1Cert).Raw
+		b.WriteByte(byte(len(raw) >> 16))
+		b.WriteByte(byte(len(raw) >> 8))
+		b.WriteByte(byte(len(raw)))
+		b.Write(raw)
+	case entryTypePrecert:
+		b.Write(t.Precert.Marshal())
+	}
 	binary.Write(&b, binary.BigEndian, t.CtExtensions)
 	return b.Bytes()
 }

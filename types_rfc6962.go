@@ -53,3 +53,18 @@ type GetEntriesResult struct {
 		ExtraData []ASN1Cert     `json:"extra_data"`
 	}
 }
+
+type GetEntryAndProofResponse struct {
+	LeafInput []byte   `json:"leaf_input"`
+	ExtraData []byte   `json:"extra_data"`
+	AuditPath []string `json:"audit_path"`
+}
+
+type GetEntryAndProofResult struct {
+	FetchedAt time.Time `json:"fetched_at"`
+	Log       *CachedLog
+	LeafHash  string         `json:"leaf_hash"`
+	LeafInput MerkleTreeLeaf `json:"leaf_input"`
+	ExtraData []ASN1Cert     `json:"extra_data"`
+	AuditPath []string       `json:"audit_path"`
+}

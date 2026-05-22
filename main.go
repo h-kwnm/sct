@@ -68,6 +68,9 @@ func main() {
 	case "get-proof-by-hash":
 		runGetProofByHash(args[1:])
 		return
+	case "get-entry-and-proof":
+		runGetEntryAndProof(args[1:])
+		return
 	default:
 		fmt.Printf("unknown command: %s\n", args[0])
 		return

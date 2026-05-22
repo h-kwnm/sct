@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -114,4 +116,57 @@ func fetchEntries(index, offset uint64, log *CachedLog) (GetEntriesResult, error
 	}
 	return result, nil
 
+}
+
+func fetchEntryAndProof(index, size uint64, log *CachedLog) (GetEntryAndProofResult, error) {
+	if index >= size {
+		return GetEntryAndProofResult{}, fmt.Errorf("unexpected leaf index or tree size. leaf index(%d) must be less than tree size(%d)", index, size)
+	}
+
+	sth, err := fetchSTH(log)
+	if err != nil {
+		return GetEntryAndProofResult{}, fmt.Errorf("fetching STH from log %d: %w", log.ID, err)
+	}
+	if size > sth.TreeSize {
+		return GetEntryAndProofResult{}, fmt.Errorf("invalid tree size: %d is greater than the latest size %d", size, sth.TreeSize)
+	}
+
+	u := strings.TrimSuffix(log.URL, "/")
+	params := url.Values{}
+	params.Set("leaf_index", strconv.FormatUint(index, 10))
+	params.Set("tree_size", strconv.FormatUint(size, 10))
+	endpoint := fmt.Sprintf("%s/ct/v1/get-entry-and-proof?%s", u, params.Encode())
+
+	body, err := httpGet(context.Background(), endpoint, 1<<20)
+	if err != nil {
+		return GetEntryAndProofResult{}, fmt.Errorf("fetching from %s: %w", endpoint, err)
+	}
+
+	var response GetEntryAndProofResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return GetEntryAndProofResult{}, err
+	}
+
+	r := bytes.NewReader(response.LeafInput)
+	mkl, err := parseMerkleTreeLeaf(r)
+	if err != nil {
+		return GetEntryAndProofResult{}, err
+	}
+	cr := bytes.NewReader(response.ExtraData)
+	certs, err := parseCertChain(cr, mkl.TimestampedEntry.LogEntryType)
+	if err != nil {
+		return GetEntryAndProofResult{}, err
+	}
+
+	leafBytes := mkl.Marshal()
+	h := sha256.Sum256(append([]byte{0x00}, leafBytes...))
+	b64Hash := base64.StdEncoding.EncodeToString(h[:])
+
+	return GetEntryAndProofResult{
+		Log:       log,
+		LeafHash:  b64Hash,
+		LeafInput: mkl,
+		ExtraData: certs,
+		AuditPath: response.AuditPath,
+	}, nil
 }
