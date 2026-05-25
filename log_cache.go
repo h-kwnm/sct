@@ -62,6 +62,16 @@ func saveLogCache(cache *LogCache) error {
 	return os.WriteFile(path, data, 0644)
 }
 
+func deriveKeyID(origin string, logIDBytes []byte) [4]byte {
+	var buf bytes.Buffer
+	buf.WriteString(origin)
+	buf.WriteByte(0x0a)
+	buf.WriteByte(0x05) // static-ct-api signature type
+	buf.Write(logIDBytes)
+	h := sha256.Sum256(buf.Bytes())
+	return [4]byte(h[:4])
+}
+
 func buildLogCache(logList *LogList) (*LogCache, error) {
 	cache := &LogCache{
 		FetchedAt:      time.Now().UTC(),
@@ -107,13 +117,8 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 			if err != nil {
 				return nil, err
 			}
-			var kbuf bytes.Buffer
-			kbuf.Write([]byte(origin))
-			kbuf.Write([]byte{0x0a})
-			kbuf.Write([]byte{0x05}) // 0x05 - static ct api signature type
-			kbuf.Write(logIDBytes)
-			khash := sha256.Sum256(kbuf.Bytes())
-			keyID := khash[0:4]
+
+			keyID := deriveKeyID(origin, logIDBytes)
 
 			cache.Logs = append(cache.Logs, CachedLog{
 				ID:            id,
