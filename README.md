@@ -129,11 +129,13 @@ sct get-sth --log <id>
 
 ### `get-proof-by-hash` - Fetch audit paths and verify them
 
-Fetches audit paths related to SCTs included in the given certificate.
+Fetches audit paths related to SCTs included in the given certificate, or hash value when a log is specified.
 The certificate is passed by either `--pem` or `--url` option. When passed by `--pem`,
 the leaf certificate's issuer certificate must also be passed by `--iss` option.
 When `--url` option is specified, both leaf and issuer certificates are automatically fetched from the endpoint.
 Certificate verification can be skipped by `--insecure` option.
+When leaf hash value is directly specified by `--hash` option, `--log` option is required.
+This pattern is useful when you want to verify the inclusion proof using a leaf hash value present in the result of `get-entry-and-proof` command.
 
 The verification result of the audit proof is reported in the `verification_success` field of the JSON-formatted output.
 The `audit_proof` field contains the raw response from the CT log's get-proof-by-hash endpoint.
@@ -142,6 +144,7 @@ Target endpoints for get-proof-by-hash are automatically identified from log IDs
 ```sh
 sct get-proof-by-hash --pem <leaf-cert-pem-file> --iss <issuer-cert-pem-file>
 sct get-proof-by-hash --url <url> [--insecure]
+sct get-proof-by-hash --log <id> --hash <base64-leaf-hash>
 ```
 
 ### `get-entries` - Fetch leaf certificate entries
@@ -155,6 +158,21 @@ Offset is 0 by default so only the entry specified by the leaf index is fetched 
 sct get-entries --log <id> --index <leaf-index>                      # fetch only the index's entry
 sct get-entries --log <id> --index <leaf-index> [--offset <offset>]  # fetch multiple (offset+1) entries starting with the index
 ```
+
+### `get-entry-and-proof` - Fetch entry and its audit path
+
+Fetches a leaf certificate entry, a certificate chain, and an audit path related to the entry from the specified log.
+The entry is identified by leaf index specified by `--index`. The audit path is based on a tree size specified by `--size`.
+
+```sh
+sct get-entry-and-proof --log <id> --index <leaf-index> --size <tree-size>
+```
+
+Unlike `get-proof-by-hash`, this command does not verify the entry's inclusion by the audit path.
+This is because the Signed Tree Head(STH) returned by the log server always reflects the current tree size,
+which may not match the `--size` value passed to this command. Without a matching root hash, the proof can not be verified.
+If you want to verify inclusion of the entry, use `--hash` option in `get-proof-by-hash` command
+by passing the hash value in the `leaf_hash` field with the log ID.
 
 ## Options
 
