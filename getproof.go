@@ -15,12 +15,42 @@ func runGetProofByHash(args []string) {
 	pemFile := fs.String("pem", "", "PEM-formatted certificate file")
 	issFile := fs.String("iss", "", "PEM-formatted issuer certificate")
 	url := fs.String("url", "", "URL to fetch server certificate")
+	leafHash := fs.String("hash", "", "Leaf hash value in Base64-encoded format")
+	logID := fs.Int("log", 0, "log id (see 'sct logs --type rfc6962')")
 	insecure := fs.Bool("insecure", false, "skip verification of the endpoint's server certificate")
 	fs.Parse(args)
 
-	if *url == "" && (*pemFile == "" || *issFile == "") {
-		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash [--pem <pem_file_path> --iss <issuer-cert>|--url <url>]")
+	if *url == "" && (*pemFile == "" || *issFile == "") && (*leafHash == "" && *logID != 0) {
+		fmt.Fprintln(os.Stderr, "usage: sct get-proof-by-hash [--pem <pem_file_path> --iss <issuer-cert>|--url <url>|--log <id> --hash <leaf-hash>]")
 		os.Exit(1)
+	}
+
+	if *leafHash != "" && *logID != 0 {
+		log, err := logByID(*logID, APITypeRFC6962)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "log with ID=%d not found in both static and rfc6962 type: %v\n", *logID, err)
+			os.Exit(1)
+		}
+
+		result, err := fetchProofByHash(*leafHash, log)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to fetch audit proof from log %d: %v\n", *logID, err)
+			os.Exit(1)
+		}
+
+		if err := verifyInclusionRFC6962(&result); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to verify RFC 6962 audit proof: %v\n", err)
+			os.Exit(1)
+		}
+
+		j, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "failed to marshal audit proof result JSON: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println(string(j))
+		return
 	}
 
 	var cert, issCert *x509.Certificate
