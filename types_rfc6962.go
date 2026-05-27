@@ -68,3 +68,25 @@ type GetEntryAndProofResult struct {
 	ExtraData []ASN1Cert     `json:"extra_data"`
 	AuditPath []string       `json:"audit_path"`
 }
+
+type AddChainBody struct {
+	Chain []string `json:"chain"`
+}
+
+type AddChainResponse struct {
+	SCTVersion int    `json:"sct_version"`
+	ID         string `json:"id"`
+	Timestamp  uint64 `json:"timestamp"`
+	Extensions []byte `json:"extensions"`
+	Signature  string `json:"signature"`
+}
+
+type AddChainResult struct {
+	AddedAt    time.Time `json:"added_at"`
+	Log        *CachedLog
+	SCTVersion int         `json:"sct_version"`
+	ID         string      `json:"id"`
+	Timestamp  CTTimestamp `json:"timestamp"`
+	Extensions []byte      `json:"extensions"`
+	Signature  string      `json:"signature"`
+}

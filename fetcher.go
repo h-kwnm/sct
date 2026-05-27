@@ -51,6 +51,29 @@ func httpGet(ctx context.Context, url string, limit int64) ([]byte, error) {
 	return body, nil
 }
 
+func httpPost(ctx context.Context, url string, limit int64, postBody io.Reader) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", url, postBody)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, limit))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d from %s: %s", resp.StatusCode, url, body)
+	}
+	return body, nil
+}
+
 func fetchLogList() (*LogList, error) {
 	body, err := httpGet(context.Background(), logListURL, 1<<20)
 	if err != nil {

@@ -39,6 +39,9 @@ func main() {
 	case "get-roots":
 		runGetRoots(args[1:])
 		return
+	case "add-chain":
+		runAddChain(args[1:])
+		return
 	case "version":
 		fmt.Println(version)
 		return
