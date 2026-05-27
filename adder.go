@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -41,13 +42,60 @@ func addChainToLog(fullChain AddChainBody, log *CachedLog) (AddChainResult, erro
 		return AddChainResult{}, err
 	}
 
+	var ext *CtExtension
+	if len(response.Extensions) > 0 {
+		ext, err = parseLeafIndex(response.Extensions)
+		if err != nil {
+			return AddChainResult{}, fmt.Errorf("failed to parse leaf index: %w", err)
+		}
+	}
+
 	return AddChainResult{
 		AddedAt:    ts,
 		Log:        log,
 		SCTVersion: response.SCTVersion,
 		ID:         response.ID,
 		Timestamp:  CTTimestamp(response.Timestamp),
-		Extensions: response.Extensions,
+		Extensions: ext,
 		Signature:  response.Signature,
+	}, nil
+}
+
+// parse leaf index type in the following format of []byte
+// [0x00]     : ExtensionType
+// [0x00 0x05]: extension_data length
+// [5 bytes]  : leaf_index (uint40)
+func parseLeafIndex(rawLeafIndexExt []byte) (*CtExtension, error) {
+	if len(rawLeafIndexExt) < 8 {
+		return nil, fmt.Errorf("leaf index extension must be 8 bytes, but %d bytes", len(rawLeafIndexExt))
+	}
+
+	r := bytes.NewReader(rawLeafIndexExt)
+
+	var extType uint8
+	if err := binary.Read(r, binary.BigEndian, &extType); err != nil {
+		return nil, err
+	}
+	if extType != extensionTypeLeafIndex {
+		return nil, fmt.Errorf("unexpected extension type %d, want %d", extType, extensionTypeLeafIndex)
+	}
+
+	var extLen uint16
+	if err := binary.Read(r, binary.BigEndian, &extLen); err != nil {
+		return nil, err
+	}
+	if extLen != 5 {
+		return nil, fmt.Errorf("unexpected extension length %d, want %d", extLen, 5)
+	}
+
+	leafIndex, err := readUint40(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CtExtension{
+		Type:   extType,
+		Length: extLen,
+		Value:  leafIndex,
 	}, nil
 }

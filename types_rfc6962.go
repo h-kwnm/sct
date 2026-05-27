@@ -84,9 +84,9 @@ type AddChainResponse struct {
 type AddChainResult struct {
 	AddedAt    time.Time `json:"added_at"`
 	Log        *CachedLog
-	SCTVersion int         `json:"sct_version"`
-	ID         string      `json:"id"`
-	Timestamp  CTTimestamp `json:"timestamp"`
-	Extensions []byte      `json:"extensions"`
-	Signature  string      `json:"signature"`
+	SCTVersion int          `json:"sct_version"`
+	ID         string       `json:"id"`
+	Timestamp  CTTimestamp  `json:"timestamp"`
+	Extensions *CtExtension `json:"extensions,omitempty"`
+	Signature  string       `json:"signature"`
 }
