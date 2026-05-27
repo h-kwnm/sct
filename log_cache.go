@@ -140,6 +140,22 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 	return cache, nil
 }
 
+func logByIDAny(id int) (*CachedLog, error) {
+	cache, err := loadLogCache()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load log cache: %w", err)
+	}
+	if cache == nil {
+		return nil, fmt.Errorf("no log cache found, run 'sct logs' first")
+	}
+	for i := range cache.Logs {
+		if cache.Logs[i].ID == id {
+			return &cache.Logs[i], nil
+		}
+	}
+	return nil, fmt.Errorf("no log with id %d", id)
+}
+
 func logByID(id int, apiType APIType) (*CachedLog, error) {
 	cache, err := loadLogCache()
 	if err != nil {
