@@ -17,6 +17,10 @@ var sycamore2026h1 = TiledLog{
 	SubmissionURL: "https://log.sycamore.ct.letsencrypt.org/2026h1/",
 	MonitoringURL: "https://mon.sycamore.ct.letsencrypt.org/2026h1/",
 	State:         LogStateUsable,
+	TemporalInterval: TemporalInterval{
+		StartInclusive: "2025-12-18T00:00:00Z",
+		EndExclusive:   "2026-06-18T00:00:00Z",
+	},
 }
 
 func sampleLogList() *LogList {

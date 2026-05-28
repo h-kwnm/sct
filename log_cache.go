@@ -81,15 +81,32 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 	id := 1
 	for _, operator := range logList.Operators {
 		for _, log := range operator.Logs {
+			var si, ee time.Time
+			var err error
+			if log.TemporalInterval.StartInclusive != "" {
+				si, err = time.Parse(time.RFC3339, log.TemporalInterval.StartInclusive)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse start_inclusive: %w", err)
+				}
+			}
+			if log.TemporalInterval.EndExclusive != "" {
+				ee, err = time.Parse(time.RFC3339, log.TemporalInterval.EndExclusive)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse end_exclusive: %w", err)
+				}
+			}
+
 			cache.Logs = append(cache.Logs, CachedLog{
-				ID:          id,
-				Operator:    operator.Name,
-				Description: log.Description,
-				LogID:       log.LogID,
-				Key:         log.Key,
-				URL:         log.URL,
-				State:       log.State,
-				APIType:     APITypeRFC6962,
+				ID:             id,
+				Operator:       operator.Name,
+				Description:    log.Description,
+				LogID:          log.LogID,
+				Key:            log.Key,
+				URL:            log.URL,
+				State:          log.State,
+				APIType:        APITypeRFC6962,
+				StartInclusive: si,
+				EndExclusive:   ee,
 			})
 			id++
 		}
@@ -120,18 +137,34 @@ func buildLogCache(logList *LogList) (*LogCache, error) {
 
 			keyID := deriveKeyID(origin, logIDBytes)
 
+			var si, ee time.Time
+			if tiledLog.TemporalInterval.StartInclusive != "" {
+				si, err = time.Parse(time.RFC3339, tiledLog.TemporalInterval.StartInclusive)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse start_inclusive: %w", err)
+				}
+			}
+			if tiledLog.TemporalInterval.EndExclusive != "" {
+				ee, err = time.Parse(time.RFC3339, tiledLog.TemporalInterval.EndExclusive)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse end_exclusive: %w", err)
+				}
+			}
+
 			cache.Logs = append(cache.Logs, CachedLog{
-				ID:            id,
-				Operator:      operator.Name,
-				Description:   tiledLog.Description,
-				LogID:         tiledLog.LogID,
-				Key:           tiledLog.Key,
-				KeyID:         fmt.Sprintf("%x", keyID),
-				Origin:        origin,
-				MonitoringURL: tiledLog.MonitoringURL,
-				SubmissionURL: tiledLog.SubmissionURL,
-				State:         tiledLog.State,
-				APIType:       APITypeStaticCT,
+				ID:             id,
+				Operator:       operator.Name,
+				Description:    tiledLog.Description,
+				LogID:          tiledLog.LogID,
+				Key:            tiledLog.Key,
+				KeyID:          fmt.Sprintf("%x", keyID),
+				Origin:         origin,
+				MonitoringURL:  tiledLog.MonitoringURL,
+				SubmissionURL:  tiledLog.SubmissionURL,
+				State:          tiledLog.State,
+				APIType:        APITypeStaticCT,
+				StartInclusive: si,
+				EndExclusive:   ee,
 			})
 			id++
 		}

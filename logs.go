@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"text/tabwriter"
+	"time"
 )
 
 func runLogs(args []string) {
@@ -12,6 +13,7 @@ func runLogs(args []string) {
 	refresh := fs.Bool("refresh", false, "re-fetch log list from Google")
 	state := fs.String("state", "", "filter by state (usable, readonly, retired, ...)")
 	apiType := fs.String("type", "", "filter by API type (static, rfc6962)")
+	interval := fs.Bool("interval", false, "show temporal interval")
 	fs.Parse(args)
 
 	// load/fetch log list
@@ -61,9 +63,20 @@ func runLogs(args []string) {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tAPI TYPE\tDESCRIPTION\tSTATE")
-	for _, log := range logs {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", log.ID, log.APIType, log.Description, log.State)
+	if *interval {
+		fmt.Fprintln(w, "ID\tAPI TYPE\tDESCRIPTION\tSTATE\tSTART\tEND")
+		for _, log := range logs {
+			fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\n",
+				log.ID, log.APIType, log.Description, log.State,
+				log.StartInclusive.Format(time.RFC3339),
+				log.EndExclusive.Format(time.RFC3339))
+		}
+	} else {
+		fmt.Fprintln(w, "ID\tAPI TYPE\tDESCRIPTION\tSTATE")
+		for _, log := range logs {
+			fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", log.ID, log.APIType, log.Description, log.State)
+		}
 	}
+
 	w.Flush()
 }

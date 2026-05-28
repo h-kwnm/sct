@@ -52,21 +52,27 @@ func (s LogState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(s))
 }
 
+type TemporalInterval struct {
+	StartInclusive string `json:"start_inclusive"`
+	EndExclusive   string `json:"end_exclusive"`
+}
 type Log struct {
-	Description string   `json:"description"`
-	LogID       string   `json:"log_id"`
-	Key         string   `json:"key"`
-	URL         string   `json:"url"`
-	State       LogState `json:"state"`
+	Description      string   `json:"description"`
+	LogID            string   `json:"log_id"`
+	Key              string   `json:"key"`
+	URL              string   `json:"url"`
+	State            LogState `json:"state"`
+	TemporalInterval `json:"temporal_interval"`
 }
 
 type TiledLog struct {
-	Description   string   `json:"description"`
-	LogID         string   `json:"log_id"`
-	Key           string   `json:"key"`
-	SubmissionURL string   `json:"submission_url"`
-	MonitoringURL string   `json:"monitoring_url"`
-	State         LogState `json:"state"`
+	Description      string   `json:"description"`
+	LogID            string   `json:"log_id"`
+	Key              string   `json:"key"`
+	SubmissionURL    string   `json:"submission_url"`
+	MonitoringURL    string   `json:"monitoring_url"`
+	State            LogState `json:"state"`
+	TemporalInterval `json:"temporal_interval"`
 }
 
 type Operator struct {
@@ -91,13 +97,15 @@ const (
 )
 
 type CachedLog struct {
-	ID          int      `json:"id"`
-	Operator    string   `json:"operator"`
-	Description string   `json:"description"`
-	LogID       string   `json:"log_id"`
-	Key         string   `json:"key"`
-	State       LogState `json:"state"`
-	APIType     APIType  `json:"api_type"`
+	ID             int       `json:"id"`
+	Operator       string    `json:"operator"`
+	Description    string    `json:"description"`
+	LogID          string    `json:"log_id"`
+	Key            string    `json:"key"`
+	State          LogState  `json:"state"`
+	APIType        APIType   `json:"api_type"`
+	StartInclusive time.Time `json:"start_inclusive"`
+	EndExclusive   time.Time `json:"end_exclusive"`
 	// Static CT API
 	KeyID         string `json:"key_id,omitempty"`
 	Origin        string `json:"origin,omitempty"`
