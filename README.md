@@ -14,7 +14,10 @@ Both tiled logs using the [Static CT API](https://github.com/C2SP/C2SP/blob/main
 go install github.com/h-kwnm/sct@latest
 ```
 
-## Common commands
+## Tool-specific commands
+
+These commands are not defined by either RFC 6962 or Static CT API specification.
+They include tool management (logs, version) and simulation/inspection utilities (`get-sct`, `audit-path`, `audit-tile`).
 
 ### `logs` - List CT logs
 
@@ -29,18 +32,10 @@ sct logs --type <type>      # filter by API type ("static" for Static CT API, "r
 
 The assigned **ID** is used by other commands to identify a log.
 
-### `get-roots` - Fetch a list of accepted root certificates
-
-Fetches a list of root certificates accepted by the specified log and prints it as JSON.
-
-```sh
-sct get-roots --log <id>
-```
-
 ### `get-sct` - Extract SCT extension contents
 
-Extracts SCT extension contents from a PEM-formatted certificate file specified by `--pem` (PEM file)
-or `--url` (URL endpoint) and prints them as JSON.
+Extracts SCT extension contents from a PEM-formatted certificate file specified by `--pem`
+or `--url` and prints them as JSON.
 When a certificate is specified by `--url` option, certificate verification can be skipped by `--insecure` option.
 
 ```sh
@@ -59,6 +54,18 @@ No HTTP requests are made, thus no need to specify target log.
 
 ```sh
 sct audit-path --index <leaf-index> --size <tree-size>  # no network requests made
+```
+
+### `audit-tile` - Print tiles for a specified combination of leaf index and tree size
+
+Prints the tiles in JSON format.
+The `tiles` field shows which tiles to fetch and which hash positions within each tile to use for proof verification.
+
+This command only simulates which tiles would be fetched, calculated based on the specified parameters.
+No HTTP requests are made, thus no need to specify target log.
+
+```sh
+sct audit-tile --index <leaf-index> --size <tree-size>  # no network requests made
 ```
 
 ### `version` - Print version
@@ -102,18 +109,6 @@ See `audit-path` and `audit-tile` to simulate audit inputs without making networ
 sct audit --log <id> --index <leaf-index>
 ```
 
-### `audit-tile` - Print tiles for a specified combination of leaf index and tree size
-
-Prints the tiles in JSON format.
-The `tiles` field shows which tiles to fetch and which hash positions within each tile to use for proof verification.
-
-This command only simulates which tiles would be fetched, calculated based on the specified parameters.
-No HTTP requests are made, thus no need to specify target log.
-
-```sh
-sct audit-tile --index <leaf-index> --size <tree-size>  # no network requests made
-```
-
 ## RFC 6962 commands
 
 These commands target RFC 6962 API.
@@ -151,7 +146,7 @@ sct get-proof-by-hash --log <id> --hash <base64-leaf-hash>
 
 Fetches one or more leaf certificate entries from the specified log.
 Entries are identified by leaf index and offset. For example,
-when the command is run with `--index 1560` and `--offset 3`, it fetches 4 entries with index through index+offset, inclusive.
+when the command is run with `--index 1560` and `--offset 3`, it fetches 4 entries - indices 1560 through 1563, inclusive.
 Offset is 0 by default so only the entry specified by the leaf index is fetched when `--offset` is omitted.
 
 ```sh
@@ -169,10 +164,43 @@ sct get-entry-and-proof --log <id> --index <leaf-index> --size <tree-size>
 ```
 
 Unlike `get-proof-by-hash`, this command does not verify the entry's inclusion by the audit path.
-This is because the Signed Tree Head(STH) returned by the log server always reflects the current tree size,
-which may not match the `--size` value passed to this command. Without a matching root hash, the proof can not be verified.
+This is because the Signed Tree Head (STH) returned by the log server always reflects the current tree size,
+which may not match the `--size` value passed to this command. Without a matching root hash, the proof cannot be verified.
 If you want to verify inclusion of the entry, use `--hash` option in `get-proof-by-hash` command
 by passing the hash value in the `leaf_hash` field with the log ID.
+
+## RFC 6962 and Static CT API commands
+
+These commands are based on RFC 6962, but target both RFC 6962 and Static CT API logs.
+So both types of logs can be specified by `--log` option when needed.
+
+### `get-roots` - Fetch a list of accepted root certificates
+
+Fetches a list of root certificates accepted by the specified log and prints it as JSON.
+
+```sh
+sct get-roots --log <id>
+```
+
+### `add-chain` - Add a certificate entry to the log
+
+Adds a certificate chain as a merkle tree leaf to the log server.
+This is a mutating action at the specified log and cannot be reverted.
+In other words, the added certificate will be recorded in the log permanently.
+Be cautious not to use it in an abusive manner.
+
+For example:
+
+- Do not run this command excessive number of times, that could cause undesirable effect in the log.
+- Do not add certificates indiscriminately, that might attract interested parties' attention as a potential threat.
+
+The certificate and its certificate chain can be passed by `--pem` with `--chain` option or `--url` option.
+When specified by `--url`, certificates are fetched by the endpoint automatically.
+
+```sh
+sct add-chain --log <id> --pem <leaf-cert-pem-file> --chain <cert-chain-pem-file>
+sct add-chain --log <id> --url <url> [--insecure]
+```
 
 ## Options
 
