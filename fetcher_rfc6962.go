@@ -170,8 +170,10 @@ func fetchEntryAndProof(index, size uint64, log *CachedLog) (GetEntryAndProofRes
 		FetchedAt: time.Now().UTC(),
 		Log:       log,
 		LeafHash:  b64Hash,
-		LeafInput: mkl,
-		ExtraData: certs,
-		AuditPath: response.AuditPath,
+		EntryWithProof: EntryWithProof{
+			LeafInput: mkl,
+			ExtraData: certs,
+			AuditPath: response.AuditPath,
+		},
 	}, nil
 }

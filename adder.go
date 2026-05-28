@@ -51,13 +51,15 @@ func addChainToLog(fullChain AddChainBody, log *CachedLog) (AddChainResult, erro
 	}
 
 	return AddChainResult{
-		AddedAt:    ts,
-		Log:        log,
-		SCTVersion: response.SCTVersion,
-		ID:         response.ID,
-		Timestamp:  CTTimestamp(response.Timestamp),
-		Extensions: ext,
-		Signature:  response.Signature,
+		AddedAt: ts,
+		Log:     log,
+		SignedCertificateTimestamp: SignedCertificateTimestamp{
+			SCTVersion: response.SCTVersion,
+			ID:         response.ID,
+			Timestamp:  CTTimestamp(response.Timestamp),
+			Extensions: ext,
+			Signature:  response.Signature,
+		},
 	}, nil
 }
 

@@ -46,7 +46,7 @@ type GetEntriesResponse struct {
 }
 
 type GetEntriesResult struct {
-	Log     *CachedLog
+	Log     *CachedLog `json:"log"`
 	Entries []struct {
 		LeafIndex uint64         `json:"leaf_index"`
 		LeafInput MerkleTreeLeaf `json:"leaf_input"`
@@ -60,13 +60,20 @@ type GetEntryAndProofResponse struct {
 	AuditPath []string `json:"audit_path"`
 }
 
-type GetEntryAndProofResult struct {
-	FetchedAt time.Time `json:"fetched_at"`
-	Log       *CachedLog
-	LeafHash  string         `json:"leaf_hash"`
+type EntryWithProof struct {
 	LeafInput MerkleTreeLeaf `json:"leaf_input"`
 	ExtraData []ASN1Cert     `json:"extra_data"`
 	AuditPath []string       `json:"audit_path"`
+}
+
+type GetEntryAndProofResult struct {
+	FetchedAt time.Time  `json:"fetched_at"`
+	Log       *CachedLog `json:"log"`
+	// LeafHash is not included in raw response.
+	// it is derived from the LeafInput under EntryWithProof
+	// so put at this level, out of EntryWithProof.
+	LeafHash       string `json:"leaf_hash"`
+	EntryWithProof `json:"response"`
 }
 
 type AddChainBody struct {
@@ -81,12 +88,16 @@ type AddChainResponse struct {
 	Signature  string `json:"signature"`
 }
 
-type AddChainResult struct {
-	AddedAt    time.Time `json:"added_at"`
-	Log        *CachedLog
+type SignedCertificateTimestamp struct {
 	SCTVersion int          `json:"sct_version"`
 	ID         string       `json:"id"`
 	Timestamp  CTTimestamp  `json:"timestamp"`
 	Extensions *CtExtension `json:"extensions,omitempty"`
 	Signature  string       `json:"signature"`
+}
+
+type AddChainResult struct {
+	AddedAt                    time.Time  `json:"added_at"`
+	Log                        *CachedLog `json:"log"`
+	SignedCertificateTimestamp `json:"response"`
 }
