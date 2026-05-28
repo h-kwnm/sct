@@ -28,6 +28,7 @@ sct logs
 sct logs --refresh          # re-fetch from Google
 sct logs --state <state>    # filter by state (usable, readonly, retired, qualified, pending, rejected)
 sct logs --type <type>      # filter by API type ("static" for Static CT API, "rfc6962" for RFC 6962)
+sct logs --interval         # show shard interval ("start_inclusive" and "end_exclusive")
 ```
 
 The assigned **ID** is used by other commands to identify a log.
@@ -201,6 +202,14 @@ When specified by `--url`, certificates are fetched by the endpoint automaticall
 sct add-chain --log <id> --pem <leaf-cert-pem-file> --chain <cert-chain-pem-file>
 sct add-chain --log <id> --url <url> [--insecure]
 ```
+
+Note that each log has its own temporal sharding intervals and only accepts certificates that expire during the interval.
+Make sure that NotAfter of the leaf certificate is between "START" ("start_inclusive") and "END" ("end_exclusive") of
+the log shown by `sct logs --interval` command.
+
+Additionally, `add-chain` fails if the log could not build a certificate path chaining to any of the accepted root certificates.
+Also make sure that the certificate chain chains up to at least one of the accepted root certificates shown by
+`sct get-roots --log <id>` command.
 
 ## Options
 
