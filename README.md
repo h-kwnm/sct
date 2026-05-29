@@ -188,7 +188,7 @@ sct get-roots --log <id>
 Adds a certificate chain as a merkle tree leaf to the log server.
 This is a mutating action at the specified log and cannot be reverted.
 In other words, the added certificate will be recorded in the log permanently.
-Be cautious not to use it in an abusive manner.
+**Be cautious not to use it in an abusive manner.**
 
 For example:
 
@@ -205,7 +205,8 @@ sct add-chain --log <id> --url <url> [--insecure]
 
 Note that each log has its own temporal sharding intervals and only accepts certificates that expire during the interval.
 Make sure that NotAfter of the leaf certificate is between "START" ("start_inclusive") and "END" ("end_exclusive") of
-the log shown by `sct logs --interval` command.
+the log. The interval can be identified by looking at [the log list](https://www.gstatic.com/ct/log_list/v3/log_list.json)
+or by runnning `sct logs --interval` command.
 
 Additionally, `add-chain` fails if the log could not build a certificate path chaining to any of the accepted root certificates.
 Also make sure that the certificate chain chains up to at least one of the accepted root certificates shown by
@@ -239,6 +240,10 @@ Tiles fetched during `audit` command invocation are cached in `sct` directory
 under the system's cache directory, e.g., `/tmp/sct` in case of Linux environment.
 Note that the cache is deleted after reboots.
 The cache file name is first 12 hex characters of a hash value, derived from the tiles' respective URL.
+
+## Example commands
+
+See [EXAMPLES.md](EXAMPLES.md) for concrete usage examples.
 
 ## License
 
