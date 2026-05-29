@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,35 @@ import (
 	"strings"
 	"time"
 )
+
+func matchesTemporalShard(cert *x509.Certificate, log *CachedLog) bool {
+	// resources for temporal sharding
+	// https://community.letsencrypt.org/t/unexpected-status-400-bad-request-from-log-server-chain-failed-to-verify-notafter/137839/7
+	// https://www.digicert.com/blog/scaling-certificate-transparency-logs-temporal-sharding
+	// https://googlechrome.github.io/CertificateTransparency/log_policy.html
+
+	slog.Debug("matchesTemporalShard",
+		"notAfter", cert.NotAfter.String(),
+		"startInclusive", log.StartInclusive.String(),
+		"endExclusive", log.EndExclusive.String(),
+	)
+
+	// temporal sharding is not set for the log
+	if log.StartInclusive.IsZero() && log.EndExclusive.IsZero() {
+		slog.Debug("matchesTemporalShard", "match", true, "reason", "no shard configured")
+		return true
+	}
+
+	// NotAfter is out of the shard interval [start_inclusive, end_exclusive)
+	if cert.NotAfter.Before(log.StartInclusive) || !cert.NotAfter.Before(log.EndExclusive) {
+		slog.Debug("matchesTemporalShard", "match", false)
+		return false
+	}
+
+	slog.Debug("matchesTemporalShard", "match", true)
+
+	return true
+}
 
 func addChainToLog(fullChain AddChainBody, log *CachedLog) (AddChainResult, error) {
 	var u string

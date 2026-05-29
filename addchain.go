@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
 func runAddChain(args []string) {
@@ -63,6 +64,12 @@ func runAddChain(args []string) {
 			os.Exit(1)
 		}
 		certs = append(certs, chainCerts...)
+	}
+
+	if !matchesTemporalShard(certs[0], log) {
+		fmt.Fprintf(os.Stderr, "failed to add, the certificate's NotAfter does not match the log's temporal shard: NotAfter=%s, shard=[%s,%s)\n",
+			certs[0].NotAfter.Format(time.RFC3339), log.StartInclusive.Format(time.RFC3339), log.EndExclusive.Format(time.RFC3339))
+		os.Exit(1)
 	}
 
 	var fullChain AddChainBody
