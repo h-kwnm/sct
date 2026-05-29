@@ -80,7 +80,6 @@ func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
 	if extLen > maxCtExtSize {
 		return CtExtension{}, fmt.Errorf("too long ct extension length: %d", extLen)
 	}
-	ctExt.Length = extLen
 
 	slog.Debug("parseCtExtension", "headerLen", 2, "extLen", extLen)
 
@@ -106,6 +105,7 @@ func parseCtExtension(r *bytes.Reader) (CtExtension, error) {
 			if leafIndexLen != 5 {
 				return CtExtension{}, fmt.Errorf("invalid leaf index length: %d", leafIndexLen)
 			}
+			ctExt.Length = leafIndexLen
 
 			leafIndex, err := readUint40(extReader)
 			if err != nil {
