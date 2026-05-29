@@ -59,9 +59,9 @@ type SCT struct {
 // --- Common structure ---
 
 type MerkleTreeLeaf struct {
-	Version          uint8 // always 0(v1)
-	MerkleLeafType   uint8 // always 0(timestamped_entry)
-	TimestampedEntry TimestampedEntry
+	Version          uint8            `json:"version"`   // always 0(v1)
+	MerkleLeafType   uint8            `json:"leaf_type"` // always 0(timestamped_entry)
+	TimestampedEntry TimestampedEntry `json:"timestamped_entry"`
 }
 
 func (l MerkleTreeLeaf) Marshal() []byte {
@@ -165,7 +165,7 @@ func (t TBSCertificate) MarshalJSON() ([]byte, error) {
 			AlgorithmIdentifier string `json:"algorithm_identifier"`
 			PublicKey           string `json:"public_key"`
 		} `json:"subject_public_key_info"`
-		Extensions []ext
+		Extensions []ext `json:"extensions"`
 	}{
 		Version:            fmt.Sprintf("0x%02x", version),
 		SerialNumber:       fmt.Sprintf("%x", serialNumber),

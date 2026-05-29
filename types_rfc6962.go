@@ -51,7 +51,7 @@ type GetEntriesResult struct {
 		LeafIndex uint64         `json:"leaf_index"`
 		LeafInput MerkleTreeLeaf `json:"leaf_input"`
 		ExtraData []ASN1Cert     `json:"extra_data"`
-	}
+	} `json:"entries"`
 }
 
 type GetEntryAndProofResponse struct {
